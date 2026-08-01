@@ -20,7 +20,9 @@ export async function POST(request: Request) {
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${base}/api/auth/session?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${base}/subscribe?canceled=1`,
-      customer_creation: "always",
+      // NOTE: customer_creation is only valid in `payment` mode, not
+      // `subscription` mode. Stripe auto-creates the customer on a
+      // subscription checkout, so omit it here.
       allow_promotion_codes: true,
       metadata: { plan },
     });
