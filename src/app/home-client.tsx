@@ -1,8 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import SeriesCard from "@/components/SeriesCard";
-import { seriesData, getSeriesById } from "@/data/series";
+import { getSeriesById } from "@/data/series";
 import Link from "next/link";
 
 export default function Home() {
@@ -12,33 +11,19 @@ export default function Home() {
 
   const featured = getSeriesById("baby-at-her-door") || seriesData[0];
 
-  // Determine the grid content based on tab
-  let gridTitle = "Discover";
-  let grid = seriesData;
+  // We're working with a single series for now — Discover showcases its EPISODES
+  // (free ones play, premium ones show a lock to drive subscriptions).
+  const allEpisodes = featured.episodeList ?? [];
+
+  // Tabs reshape which episodes are surfaced (still one series).
+  let sectionTitle = "Discover";
+  let episodes = allEpisodes;
   if (tab === "new") {
-    gridTitle = "✨ New Releases";
-    grid = seriesData.filter((s) => s.isNew);
+    sectionTitle = "Discover";
+    episodes = [...allEpisodes].sort((a, b) => (a.isFree === b.isFree ? 0 : a.isFree ? -1 : 1));
   } else if (tab === "premium") {
-    gridTitle = "💎 Premium";
-    grid = seriesData.filter((s) => s.isPremium);
-  } else if (tab === "trending") {
-    gridTitle = "🔥 Trending";
-    grid = [...seriesData].sort(
-      (a, b) =>
-        parseInt(b.views.replace(/[^\d]/g, "")) -
-        parseInt(a.views.replace(/[^\d]/g, ""))
-    );
-  } else if (tab === "search") {
-    gridTitle = q ? `Search: "${q}"` : "Search";
-    const needle = q.toLowerCase();
-    grid = seriesData.filter(
-      (s) =>
-        s.title.toLowerCase().includes(needle) ||
-        s.genre.toLowerCase().includes(needle)
-    );
-  } else {
-    gridTitle = "Discover";
-    grid = seriesData;
+    sectionTitle = "💎 Premium Episodes";
+    episodes = allEpisodes.filter((e) => !e.isFree);
   }
 
   return (
@@ -53,7 +38,6 @@ export default function Home() {
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
           <div className="absolute bottom-4 left-4 right-4">
-            <span className="text-[#D4AF37] text-xs font-medium">🔥 TRENDING NOW</span>
             <h2 className="text-xl font-bold mt-1">{featured.title}</h2>
             <p className="text-[#aaa] text-xs mt-1 line-clamp-2">
               {featured.description}
@@ -68,54 +52,83 @@ export default function Home() {
         </div>
       )}
 
-      {/* Continue Watching — only on Discover */}
+      {/* Premium teaser — only on Discover, drives subscriptions */}
       {tab === "discover" && (
         <section className="mb-6">
-          <h2 className="text-lg font-bold mb-3">Continue Watching</h2>
+          <h2 className="text-lg font-bold mb-3">Continue with Premium</h2>
           <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
-            {seriesData.slice(0, 3).map((series) => (
-              <Link key={series.id} href={`/series/${series.id}/watch/1`} className="flex-shrink-0 w-40">
-                <div className="relative rounded-lg overflow-hidden">
-                  <img
-                    src={series.thumbnail}
-                    alt={series.title}
-                    className="w-full h-24 object-cover"
-                  />
-                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#333]">
-                    <div className="h-full bg-[#D4AF37]" style={{ width: "45%" }} />
+            {episodes
+              .filter((e) => !e.isFree)
+              .slice(0, 4)
+              .map((ep) => (
+                <Link
+                  key={ep.number}
+                  href={`/series/${featured.id}/watch/${ep.number}`}
+                  className="flex-shrink-0 w-40"
+                >
+                  <div className="relative rounded-lg overflow-hidden">
+                    <img
+                      src={ep.thumbnail}
+                      alt={ep.title}
+                      className="w-full h-24 object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/55 flex items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-[#D4AF37]" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
                   </div>
-                </div>
-                <p className="text-xs mt-1 line-clamp-1">{series.title}</p>
-                <p className="text-[#888] text-[10px]">Episode 3 of {series.episodes}</p>
-              </Link>
-            ))}
+                  <p className="text-xs mt-1 line-clamp-1">{ep.number}. {ep.title}</p>
+                </Link>
+              ))}
           </div>
         </section>
       )}
 
-      {/* Filtered / searched grid */}
+      {/* Episodes of the single series — free play, premium show lock to drive subs */}
       <section className="mb-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-bold">{gridTitle}</h2>
+          <h2 className="text-lg font-bold">{sectionTitle}</h2>
           {tab === "discover" && (
-            <button className="text-[#D4AF37] text-sm">See All</button>
+            <Link href="/subscribe" className="text-[#D4AF37] text-sm">
+              Subscribe
+            </Link>
           )}
         </div>
 
-        {grid.length > 0 ? (
-          <div className="grid grid-cols-3 gap-3">
-            {grid.map((series) => (
-              <SeriesCard key={series.id} series={series} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-10">
-            <span className="text-4xl">🔍</span>
-            <p className="text-[#aaa] mt-3">
-              {tab === "search" ? `No results for "${q}"` : "Nothing here yet"}
-            </p>
-          </div>
-        )}
+        <div className="grid grid-cols-2 gap-3">
+          {episodes.map((ep) => (
+            <Link
+              key={ep.number}
+              href={`/series/${featured.id}/watch/${ep.number}`}
+              className="relative rounded-lg overflow-hidden group"
+            >
+              <div className="relative">
+                <img
+                  src={ep.thumbnail}
+                  alt={ep.title}
+                  className="w-full h-28 object-cover"
+                />
+                {/* Locked overlay for premium episodes */}
+                {!ep.isFree && (
+                  <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-[#D4AF37]" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-[#D4AF37] text-[10px] font-medium mt-1">Premium</span>
+                  </div>
+                )}
+                {ep.isFree && (
+                  <span className="absolute top-1 left-1 bg-[#D4AF37] text-black text-[9px] font-bold px-1.5 py-0.5 rounded">
+                    FREE
+                  </span>
+                )}
+              </div>
+              <p className="text-xs mt-1 line-clamp-1 text-white">{ep.number}. {ep.title}</p>
+              <p className="text-[#888] text-[10px]">{ep.duration}</p>
+            </Link>
+          ))}
+        </div>
       </section>
     </div>
   );

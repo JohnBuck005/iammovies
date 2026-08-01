@@ -7,8 +7,16 @@ import {
   useState,
   ReactNode,
 } from "react";
+import { getBrowserSupabase } from "@/lib/supabaseClient";
+
+interface AuthUser {
+  id: string;
+  email: string | null;
+}
 
 interface UserState {
+  user: AuthUser | null;
+  isAuthed: boolean;
   watchlist: string[]; // series ids
   points: number;
   watched: Record<string, number>; // "seriesId:episode" -> last position (0-100)
@@ -31,13 +39,15 @@ function today(): string {
 }
 
 export function UserProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isAuthed, setIsAuthed] = useState(false);
   const [watchlist, setWatchlist] = useState<string[]>([]);
   const [points, setPoints] = useState(0);
   const [watched, setWatched] = useState<Record<string, number>>({});
   const [lastCheckIn, setLastCheckIn] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
-  // Load from localStorage on mount
+  // Load guest (localStorage) defaults first so the UI isn't empty pre-auth.
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -51,24 +61,91 @@ export function UserProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore corrupt storage
     }
-    setLoaded(true);
   }, []);
 
-  // Persist on change (only after initial load)
+  // Auth session + server-synced watchlist/progress for logged-in users.
+  const loadSession = async () => {
+    const supabase = getBrowserSupabase();
+    try {
+      const { data } = await supabase.auth.getUser();
+      const u = data.user;
+      if (!u) {
+        setUser(null);
+        setIsAuthed(false);
+        setLoaded(true);
+        return;
+      }
+      setUser({ id: u.id, email: u.email ?? null });
+      setIsAuthed(true);
+
+      const [{ data: wl }, { data: prog }] = await Promise.all([
+        supabase.from("watchlists").select("series_id").eq("user_id", u.id),
+        supabase
+          .from("watch_progress")
+          .select("series_id,episode,progress")
+          .eq("user_id", u.id),
+      ]);
+
+      setWatchlist((wl ?? []).map((r: { series_id: string }) => r.series_id));
+      const w: Record<string, number> = {};
+      (prog ?? []).forEach(
+        (r: { series_id: string; episode: number; progress: number }) => {
+          w[`${r.series_id}:${r.episode}`] = r.progress;
+        }
+      );
+      setWatched(w);
+    } catch {
+      // Tables may not exist yet / network issue — fall back to local.
+    }
+    setLoaded(true);
+  };
+
   useEffect(() => {
-    if (!loaded) return;
+    loadSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const supabase = getBrowserSupabase();
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      loadSession();
+    });
+    return () => subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist guest data locally (only when not authed).
+  useEffect(() => {
+    if (!loaded || isAuthed) return;
     const data = { watchlist, points, watched, lastCheckIn };
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch {
       // ignore quota errors
     }
-  }, [watchlist, points, watched, lastCheckIn, loaded]);
+  }, [watchlist, points, watched, lastCheckIn, loaded, isAuthed]);
 
   const toggleWatchlist = (id: string) => {
+    const isIn = watchlist.includes(id);
     setWatchlist((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+      isIn ? prev.filter((x) => x !== id) : [...prev, id]
     );
+    if (isAuthed && user) {
+      const supabase = getBrowserSupabase();
+      if (isIn) {
+        supabase
+          .from("watchlists")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("series_id", id);
+      } else {
+        supabase
+          .from("watchlists")
+          .insert({ user_id: user.id, series_id: id });
+      }
+    }
   };
 
   const inWatchlist = (id: string) => watchlist.includes(id);
@@ -81,12 +158,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
-  const recordWatched = (seriesId: string, episode: number, pct: number) => {
+  const recordWatched = (
+    seriesId: string,
+    episode: number,
+    pct: number
+  ) => {
     const key = `${seriesId}:${episode}`;
-    setWatched((prev) => {
-      const cur = prev[key] ?? 0;
-      return { ...prev, [key]: Math.max(cur, pct) };
-    });
+    setWatched((prev) => ({ ...prev, [key]: Math.max(prev[key] ?? 0, pct) }));
+    if (isAuthed && user) {
+      const supabase = getBrowserSupabase();
+      supabase.from("watch_progress").upsert(
+        { user_id: user.id, series_id: seriesId, episode, progress: pct },
+        { onConflict: "user_id,series_id,episode" }
+      );
+    }
   };
 
   const checkIn = () => {
@@ -104,6 +189,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
   return (
     <UserContext.Provider
       value={{
+        user,
+        isAuthed,
         watchlist,
         points,
         watched,
@@ -127,15 +214,17 @@ export function useUser() {
   if (!ctx) {
     // Safe fallback during SSR / before provider mounts
     return {
+      user: null,
+      isAuthed: false,
       watchlist: [] as string[],
       points: 0,
       watched: {} as Record<string, number>,
       lastCheckIn: null,
-      toggleWatchlist: (_id: string) => {},
-      inWatchlist: (_id: string) => false,
-      addPoints: (_n: number) => {},
-      spendPoints: (_n: number) => false,
-      recordWatched: (_s: string, _e: number, _p: number) => {},
+      toggleWatchlist: () => {},
+      inWatchlist: () => false,
+      addPoints: () => {},
+      spendPoints: () => false,
+      recordWatched: () => {},
       watchedCount: 0,
       checkIn: () => ({ ok: false, gained: 0 }),
     };

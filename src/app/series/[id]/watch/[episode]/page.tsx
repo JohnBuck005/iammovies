@@ -4,7 +4,8 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import VideoPlayer from "@/components/VideoPlayer";
 import Comments from "@/components/Comments";
-import { getSubscriptionStatus } from "@/lib/supabaseServer";
+import ShareButton from "@/components/ShareButton";
+import { getSubscriptionStatus, getServerUserEmail } from "@/lib/supabaseServer";
 
 export function generateStaticParams() {
   const params: { id: string; episode: string }[] = [];
@@ -32,8 +33,9 @@ export default async function WatchPage({
   const ep = getEpisode(id, episodeNum);
   const staticallyFree = ep ? ep.isFree : episodeNum <= 2;
 
-  // Real gating: a paying subscriber can watch any episode. Non-subscribers
-  // (or missing Supabase env) fall back to the static free-eps rule.
+  // Real gating: a paying subscriber can watch any episode. We check both:
+  //   1) the Stripe "iam_sub" cookie (existing flow), and
+  //   2) the logged-in user's auth email against the subscriptions table.
   let hasSubscription = false;
   try {
     const jar = await cookies();
@@ -45,6 +47,14 @@ export default async function WatchPage({
         email: parsed.email,
       });
       hasSubscription = status === "active" || status === "trialing";
+    }
+
+    if (!hasSubscription) {
+      const email = await getServerUserEmail();
+      if (email) {
+        const status = await getSubscriptionStatus({ email });
+        hasSubscription = status === "active" || status === "trialing";
+      }
     }
   } catch {
     hasSubscription = false;
@@ -100,26 +110,18 @@ export default async function WatchPage({
             </svg>
             <span className="text-[10px] text-[#888]">Like</span>
           </button>
-          <button className="flex flex-col items-center gap-1">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
-            </svg>
-            <span className="text-[10px] text-[#888]">Share</span>
-          </button>
+          <ShareButton />
           <button className="flex flex-col items-center gap-1">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
             </svg>
             <span className="text-[10px] text-[#888]">Save</span>
           </button>
-          <button className="flex flex-col items-center gap-1">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
-            <span className="text-[10px] text-[#888]">Download</span>
-          </button>
         </div>
       </div>
+
+      {/* Episode comments — shown right under the video/action row */}
+      <Comments seriesId={series.id} episode={episodeNum} />
 
       {/* Episode navigation */}
       <div className="px-4 py-4 flex gap-3">
@@ -189,9 +191,6 @@ export default async function WatchPage({
           ))}
         </div>
       </div>
-
-      {/* Episode comments */}
-      <Comments seriesId={series.id} episode={episodeNum} />
     </div>
   );
 }

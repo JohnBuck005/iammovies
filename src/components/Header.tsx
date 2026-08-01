@@ -9,7 +9,6 @@ const TABS = [
   { key: "discover", label: "Discover", icon: null },
   { key: "new", label: "New", icon: "✨" },
   { key: "premium", label: "Premium", icon: "💎" },
-  { key: "trending", label: "Trending", icon: null },
 ];
 
 export default function Header() {
@@ -22,10 +21,13 @@ export default function Header() {
   const [focused, setFocused] = useState(false);
 
   const results = query.trim()
-    ? seriesData.filter(
-        (s) =>
-          s.title.toLowerCase().includes(query.toLowerCase()) ||
-          s.genre.toLowerCase().includes(query.toLowerCase())
+    ? seriesData.flatMap((s) =>
+        (s.episodeList ?? []).map((e) => ({
+          series: s,
+          episode: e,
+        }))
+      ).filter(({ episode }) =>
+        episode.title.toLowerCase().includes(query.toLowerCase())
       )
     : [];
 
@@ -76,7 +78,7 @@ export default function Header() {
         <form onSubmit={goSearch} className="relative">
           <input
             type="text"
-            placeholder="Search series..."
+            placeholder="Search episodes..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => setFocused(true)}
@@ -93,22 +95,22 @@ export default function Header() {
           {focused && query.trim() && (
             <div className="absolute left-0 right-0 top-12 bg-[#1a1a1a] border border-[#333] rounded-lg shadow-xl max-h-80 overflow-y-auto z-50">
               {results.length > 0 ? (
-                results.map((s) => (
+                results.map(({ series, episode }) => (
                   <Link
-                    key={s.id}
-                    href={`/series/${s.id}`}
+                    key={`${series.id}-${episode.number}`}
+                    href={`/series/${series.id}/watch/${episode.number}`}
                     className="flex items-center gap-3 p-3 hover:bg-[#222] transition border-b border-[#222] last:border-0"
                   >
-                    <img src={s.thumbnail} alt={s.title} className="w-10 h-14 object-cover rounded" />
+                    <img src={episode.thumbnail || series.thumbnail} alt={episode.title} className="w-10 h-14 object-cover rounded" />
                     <div className="min-w-0">
-                      <p className="text-sm font-medium line-clamp-1">{s.title}</p>
-                      <p className="text-[#888] text-xs">{s.genre} · {s.views}</p>
+                      <p className="text-sm font-medium line-clamp-1">{episode.title}</p>
+                      <p className="text-[#888] text-xs">{series.title} · Episode {episode.number}</p>
                     </div>
                   </Link>
                 ))
               ) : (
                 <div className="p-4 text-center text-[#888] text-sm">
-                  No series found for "{query}"
+                  No episodes found for "{query}"
                 </div>
               )}
             </div>

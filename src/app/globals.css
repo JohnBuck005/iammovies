@@ -59,10 +59,10 @@ body {
   color: var(--accent);
 }
 
-/* Video player */
+/* Video player — full-bleed, immersive landscape fill (scales proportionally) */
 .video-container {
-  aspect-ratio: 9/16;
-  max-height: 70vh;
+  width: 100%;
+  aspect-ratio: 16 / 9;
 }
 
 /* Subscription card */

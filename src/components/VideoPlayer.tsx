@@ -41,7 +41,7 @@ export default function VideoPlayer({
           </div>
           <h3 className="text-lg font-bold mb-1">Episode {episodeNum} is Premium</h3>
           <p className="text-[#aaa] text-sm mb-4 max-w-xs">
-            Subscribe to unlock all {title} episodes, ad-free with offline downloads.
+            Subscribe to unlock all {title} episodes, ad-free.
           </p>
           <Link
             href="/subscribe"
@@ -58,10 +58,12 @@ export default function VideoPlayer({
   // Free / unlocked episode → real video player
   if (videoUrl) {
     return (
-      <div className="relative w-full bg-black" style={{ aspectRatio: "16/9" }}>
+      <div className="relative w-full bg-black" style={{ aspectRatio: "16 / 9" }}>
         <video
           key={videoUrl}
           controls
+          controlsList="nodownload"
+          disablePictureInPicture
           autoPlay
           poster={poster}
           className="w-full h-full object-contain bg-black"
