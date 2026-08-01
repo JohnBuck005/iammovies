@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Hls from "hls.js";
 import { useUser } from "@/components/UserProvider";
 
 interface VideoPlayerProps {
-  videoUrl: string | null;
+  videoUrl: string | null; // a /api/video?ep=N endpoint that returns { url }
   poster: string;
   title: string;
   episodeNum: number;
@@ -22,7 +23,49 @@ export default function VideoPlayer({
   seriesId,
 }: VideoPlayerProps) {
   const [showPaywall, setShowPaywall] = useState(false);
+  const [hlsUrl, setHlsUrl] = useState<string | null>(null);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const { addPoints, recordWatched } = useUser();
+
+  // Fetch the signed manifest URL from our server route
+  useEffect(() => {
+    if (!videoUrl) return;
+    let cancelled = false;
+    setHlsUrl(null);
+    setLoadErr(null);
+    fetch(videoUrl)
+      .then((r) => {
+        if (!r.ok) throw new Error(`video endpoint ${r.status}`);
+        return r.json();
+      })
+      .then((d) => {
+        if (!cancelled) setHlsUrl(d.url ?? null);
+      })
+      .catch((e) => {
+        if (!cancelled) setLoadErr(String(e.message || e));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [videoUrl]);
+
+  // Attach HLS via hls.js (or native for Safari)
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !hlsUrl) return;
+    if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = hlsUrl;
+      return;
+    }
+    if (Hls.isSupported()) {
+      const hls = new Hls({ maxBufferLength: 30 });
+      hls.loadSource(hlsUrl);
+      hls.attachMedia(video);
+      return () => hls.destroy();
+    }
+    video.src = hlsUrl;
+  }, [hlsUrl]);
 
   // Locked premium episode → show paywall gate
   if (isLocked) {
@@ -60,7 +103,8 @@ export default function VideoPlayer({
     return (
       <div className="relative w-full bg-black" style={{ aspectRatio: "16 / 9" }}>
         <video
-          key={videoUrl}
+          key={hlsUrl ?? ""}
+          ref={videoRef}
           controls
           controlsList="nodownload"
           disablePictureInPicture
@@ -72,10 +116,12 @@ export default function VideoPlayer({
             recordWatched(seriesId, episodeNum, 100);
             addPoints(10);
           }}
-        >
-          <source src={videoUrl} type="video/mp4" />
-          Your browser does not support the video tag.
-        </video>
+        />
+        {loadErr && (
+          <div className="absolute inset-0 flex items-center justify-center px-6 text-center">
+            <p className="text-red-400 text-sm">Could not load video: {loadErr}</p>
+          </div>
+        )}
       </div>
     );
   }
