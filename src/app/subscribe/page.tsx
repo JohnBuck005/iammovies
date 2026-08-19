@@ -119,7 +119,7 @@ export default function SubscribePage() {
       <div className="text-center mb-6">
         <p className="text-[#888] text-xs mb-3">Secure payment via</p>
         <div className="flex items-center justify-center gap-4">
-          <span className="text-[#888] text-sm">💳 Stripe</span>
+          <span className="text-[#888] text-sm">💳 LemonSqueezy</span>
           <span className="text-[#888] text-sm">🍎 Apple Pay</span>
           <span className="text-[#888] text-sm">📱 Google Pay</span>
         </div>
