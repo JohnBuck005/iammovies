@@ -6,13 +6,20 @@ import Hls from "hls.js";
 import { useUser } from "@/components/UserProvider";
 
 interface VideoPlayerProps {
-  videoUrl: string | null; // a /api/video?ep=N endpoint that returns { url }
+  videoUrl: string | null;
   poster: string;
   title: string;
   episodeNum: number;
   isLocked: boolean;
   seriesId: string;
 }
+
+type QualityLevel = {
+  index: number;
+  height: number;
+  width: number;
+  label: string;
+};
 
 export default function VideoPlayer({
   videoUrl,
@@ -25,7 +32,10 @@ export default function VideoPlayer({
   const [showPaywall, setShowPaywall] = useState(false);
   const [hlsUrl, setHlsUrl] = useState<string | null>(null);
   const [loadErr, setLoadErr] = useState<string | null>(null);
+  const [levels, setLevels] = useState<QualityLevel[]>([]);
+  const [currentLevel, setCurrentLevel] = useState<number>(-1);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
   const { addPoints, recordWatched } = useUser();
 
   // Fetch the signed manifest URL from our server route
@@ -34,6 +44,12 @@ export default function VideoPlayer({
     let cancelled = false;
     setHlsUrl(null);
     setLoadErr(null);
+    setLevels([]);
+    setCurrentLevel(-1);
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
     fetch(videoUrl)
       .then((r) => {
         if (!r.ok) throw new Error(`video endpoint ${r.status}`);
@@ -54,21 +70,55 @@ export default function VideoPlayer({
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !hlsUrl) return;
+
     if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = hlsUrl;
       return;
     }
+
     if (Hls.isSupported()) {
       const hls = new Hls({ maxBufferLength: 30 });
+      hlsRef.current = hls;
       hls.loadSource(hlsUrl);
       hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        hls.startLevel = hls.levels.length - 1;
+
+      hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
+        const parsed: QualityLevel[] = data.levels.map((level, index) => ({
+          index,
+          height: level.height,
+          width: level.width,
+          label: `${level.height}p`,
+        }));
+        setLevels(parsed);
+
+        // Start at 720p if available, otherwise highest quality
+        const level720 = parsed.find((l) => l.height >= 720);
+        const startIndex = level720 ? level720.index : parsed.length - 1;
+        hls.startLevel = startIndex;
+        setCurrentLevel(startIndex);
       });
-      return () => hls.destroy();
+
+      hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
+        if (data.level >= 0) setCurrentLevel(data.level);
+      });
+
+      return () => {
+        hls.destroy();
+        hlsRef.current = null;
+      };
     }
+
     video.src = hlsUrl;
   }, [hlsUrl]);
+
+  const handleQualityChange = (index: number) => {
+    const hls = hlsRef.current;
+    if (!hls) return;
+    hls.currentLevel = index;
+    setCurrentLevel(index);
+  };
+
+  const autoLevel = levels.find((l) => l.height >= 720);
 
   // Locked premium episode → show paywall gate
   if (isLocked) {
@@ -103,6 +153,11 @@ export default function VideoPlayer({
 
   // Free / unlocked episode → real video player
   if (videoUrl) {
+    const qualityLabel =
+      currentLevel === -1
+        ? "Auto"
+        : levels[currentLevel]?.label ?? "Auto";
+
     return (
       <div className="relative w-full bg-black" style={{ aspectRatio: "16 / 9" }}>
         <video
@@ -123,6 +178,22 @@ export default function VideoPlayer({
         {loadErr && (
           <div className="absolute inset-0 flex items-center justify-center px-6 text-center">
             <p className="text-red-400 text-sm">Could not load video: {loadErr}</p>
+          </div>
+        )}
+        {levels.length > 0 && !loadErr && (
+          <div className="absolute top-3 right-3 z-10">
+            <select
+              value={currentLevel}
+              onChange={(e) => handleQualityChange(Number(e.target.value))}
+              className="bg-black/70 text-white text-xs rounded-lg border border-white/20 px-2 py-1.5 backdrop-blur-sm"
+            >
+              <option value={-1}>Auto{autoLevel ? ` (720p)` : ""}</option>
+              {levels.map((l) => (
+                <option key={l.index} value={l.index}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
           </div>
         )}
       </div>
