@@ -62,6 +62,9 @@ export default function VideoPlayer({
       const hls = new Hls({ maxBufferLength: 30 });
       hls.loadSource(hlsUrl);
       hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        hls.startLevel = hls.levels.length - 1;
+      });
       return () => hls.destroy();
     }
     video.src = hlsUrl;
