@@ -28,7 +28,7 @@ export const EPISODE_GUIDS: Record<number, string> = {
 export function getBunnyManifestUrl(episode: number): string | null {
   const guid = EPISODE_GUIDS[episode];
   if (!guid) return null;
-  const base = `https://${PULLZONE}/${guid}/play.m3u8`;
+  const base = `https://${PULLZONE}/${guid}/playlist.m3u8`;
   const key = process.env.BUNNY_TOKEN_KEY;
   if (!key) return base; // unsigned — requires token-auth OFF in Bunny dashboard
   // Bunny token auth: token = HMAC-SHA256(path + expires + key), hex
