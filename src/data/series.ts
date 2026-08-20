@@ -51,6 +51,8 @@ export const seriesData: Series[] = [
       { number: 11, title: "No Turning Back", duration: "10:00", videoUrl: "/api/video?ep=11", isFree: false, thumbnail: "/images/episodes/tbahd-ep11.jpg" },
       { number: 12, title: "Revelations", duration: "9:31", videoUrl: "/api/video?ep=12", isFree: false, thumbnail: "/images/episodes/tbahd-ep12.jpg" },
       { number: 13, title: "Finale — Love Prevails", duration: "11:09", videoUrl: "/api/video?ep=13", isFree: false, thumbnail: "/images/episodes/tbahd-ep13.jpg" },
+      { number: 14, title: "TBADHD Episode 14", duration: "9:16", videoUrl: "/api/video?ep=14", isFree: false, thumbnail: "/images/episodes/tbahd-ep13.jpg" },
+      { number: 15, title: "TBADHD Episode 15", duration: "10:18", videoUrl: "/api/video?ep=15", isFree: false, thumbnail: "/images/episodes/tbahd-ep13.jpg" },
     ],
   },
   {

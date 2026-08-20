@@ -21,6 +21,8 @@ export const EPISODE_GUIDS: Record<number, string> = {
   11: "8bbac460-280c-48c9-acb1-e2a4d9d4b07a",
   12: "83a60fcf-06a1-4b7c-bf65-3a9604fb1f1d",
   13: "e4d2fb6b-5e48-4fe0-9651-bd17a9348e00",
+  14: "4df204f5-dd60-4c0c-ae3b-0e9210b00a40",
+  15: "4f3acedc-5991-42e7-b3f3-1e5844646d8b",
 };
 
 export function getBunnyManifestUrl(episode: number): string | null {

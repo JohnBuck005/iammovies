@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 // The token (if BUNNY_TOKEN_KEY is set) is signed server-side — never exposed to the browser.
 export async function GET(req: NextRequest) {
   const ep = Number(req.nextUrl.searchParams.get("ep"));
-  if (!ep || ep < 1 || ep > 13) {
+  if (!ep || ep < 1 || ep > 15) {
     return new Response("Invalid episode", { status: 400 });
   }
   const url = getBunnyManifestUrl(ep);
