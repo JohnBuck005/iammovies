@@ -4,10 +4,10 @@ import { useState } from "react";
 
 type PlanId = "monthly" | "quarterly" | "yearly";
 
-const PLANS: { id: PlanId; name: string; sub: string; price: string; unit: string; badge?: string }[] = [
+const PLANS: { id: PlanId; name: string; sub: string; price: string; unit: string; discount?: string }[] = [
   { id: "monthly", name: "Monthly", sub: "Billed monthly", price: "$9.99", unit: "/month" },
-  { id: "quarterly", name: "Quarterly", sub: "Billed every 3 months", price: "$24.99", unit: "/quarter", badge: "POPULAR" },
-  { id: "yearly", name: "Yearly", sub: "Billed annually", price: "$79.99", unit: "/year", badge: "BEST VALUE" },
+  { id: "quarterly", name: "Quarterly", sub: "Billed every 3 months", price: "$26.97", unit: "/quarter", discount: "Save 10%" },
+  { id: "yearly", name: "Yearly", sub: "Billed annually", price: "$101.90", unit: "/year", discount: "Save 15%" },
 ];
 
 export default function SubscribePage() {
@@ -82,9 +82,9 @@ export default function SubscribePage() {
                 selected ? "border-[#D4AF37] bg-[#1a1a1a]" : "border-transparent bg-[#1a1a1a]"
               } relative`}
             >
-              {p.badge && (
+              {p.discount && (
                 <span className="absolute -top-2 left-4 bg-[#D4AF37] text-black text-[10px] px-2 py-0.5 rounded font-medium">
-                  {p.badge}
+                  {p.discount}
                 </span>
               )}
               <div className="flex items-center justify-between">
