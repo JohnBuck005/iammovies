@@ -30,7 +30,7 @@ export const seriesData: Series[] = [
     title: "The Baby at Her Door",
     genre: "Romance Drama",
     views: "4.7K",
-    episodes: 13,
+    episodes: 15,
     isNew: true,
     isReal: true,
     thumbnail: "/images/tbahd-hero.jpg",
