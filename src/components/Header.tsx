@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
+import { useSearchParams, usePathname } from "next/navigation";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { seriesData } from "@/data/series";
 
 const TABS = [
@@ -13,7 +14,25 @@ const TABS = [
 
 export default function Header() {
   const pathname = usePathname();
-  const activeTab = pathname === "/" ? "discover" : "discover";
+  const searchParams = useSearchParams();
+  const activeTab = pathname === "/" ? searchParams.get("tab") ?? "discover" : "discover";
+
+  const [query, setQuery] = useState("");
+  const [focused, setFocused] = useState(false);
+
+  const results = query.trim()
+    ? seriesData
+        .flatMap((s) => (s.episodeList ?? []).map((e) => ({ series: s, episode: e })))
+        .filter(({ episode }) => episode.title.toLowerCase().includes(query.toLowerCase()))
+    : [];
+
+  const goSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (query.trim()) {
+      window.location.href = `/?tab=discover&q=${encodeURIComponent(query.trim())}`;
+      setFocused(false);
+    }
+  };
 
   const selectTab = (key: string) => {
     window.location.href = `/?tab=${key}`;
@@ -47,10 +66,14 @@ export default function Header() {
         </div>
 
         {/* Search */}
-        <form onSubmit={(e) => { e.preventDefault(); }} className="relative">
+        <form onSubmit={goSearch} className="relative">
           <input
             type="text"
             placeholder="Search series..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setTimeout(() => setFocused(false), 150)}
             className="w-full bg-[#1a1a1a] text-white px-4 py-2.5 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#D4AF37] placeholder-[#666]"
           />
           <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666]">
@@ -58,6 +81,31 @@ export default function Header() {
               <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
             </svg>
           </button>
+
+          {/* Live dropdown results */}
+          {focused && query.trim() && (
+            <div className="absolute left-0 right-0 top-12 bg-[#1a1a1a] border border-[#333] rounded-lg shadow-xl max-h-80 overflow-y-auto z-50">
+              {results.length > 0 ? (
+                results.map(({ series, episode }) => (
+                  <Link
+                    key={`${series.id}-${episode.number}`}
+                    href={`/series/${series.id}/watch/${episode.number}`}
+                    className="flex items-center gap-3 p-3 hover:bg-[#222] transition border-b border-[#222] last:border-0"
+                  >
+                    <img src={episode.thumbnail || series.thumbnail} alt={episode.title} className="w-10 h-14 object-cover rounded" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium line-clamp-1">{episode.title}</p>
+                      <p className="text-[#888] text-xs">{series.title} · Episode {episode.number}</p>
+                    </div>
+                  </Link>
+                ))
+              ) : (
+                <div className="p-4 text-center text-[#888] text-sm">
+                  No episodes found for "{query}"
+                </div>
+              )}
+            </div>
+          )}
         </form>
 
         {/* Category tabs */}
