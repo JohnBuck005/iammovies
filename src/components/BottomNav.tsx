@@ -24,6 +24,16 @@ const navItems = [
     ),
   },
   {
+    label: "Rewards",
+    href: "/rewards",
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+        <path fillRule="evenodd" d="M5 2a1 1 0 011 1v1h4a2 2 0 012 2v1h2a2 2 0 012 2v1H4a1 1 0 01-1-1V6a2 2 0 012-2h4V3a1 1 0 011-1zm7 4a2 2 0 11-4 0 2 2 0 014 0zM4 14v2a2 2 0 002 2h8a2 2 0 002-2v-2H4z" clipRule="evenodd" />
+      </svg>
+    ),
+    showDot: true,
+  },
+  {
     label: "My List",
     href: "/watchlist",
     icon: (
@@ -68,6 +78,9 @@ export default function BottomNav() {
                   <span className="absolute -top-1 -right-2 bg-[#D4AF37] text-black text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
                     {myListCount}
                   </span>
+                )}
+                {item.showDot && (
+                  <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[9px] rounded-full w-3 h-3" />
                 )}
               </div>
               <span className="text-[10px]">{item.label}</span>

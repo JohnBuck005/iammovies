@@ -1,131 +1,116 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
-import { getSeriesById } from "@/data/series";
+import { seriesData, getSeriesById } from "@/data/series";
 import Link from "next/link";
 
 export default function Home() {
-  const searchParams = useSearchParams();
-  const tab = searchParams.get("tab") ?? "discover";
-  const q = searchParams.get("q") ?? "";
-
   const featured = getSeriesById("baby-at-her-door") || seriesData[0];
 
-  // We're working with a single series for now — Discover showcases its EPISODES
-  // (free ones play, premium ones show a lock to drive subscriptions).
-  const allEpisodes = featured.episodeList ?? [];
+  const continueWatching = seriesData.filter((s) => s.isReal).slice(0, 3);
 
-  // Tabs reshape which episodes are surfaced (still one series).
-  let sectionTitle = "Discover";
-  let episodes = allEpisodes;
-  if (tab === "new") {
-    sectionTitle = "Discover";
-    episodes = [...allEpisodes].sort((a, b) => (a.isFree === b.isFree ? 0 : a.isFree ? -1 : 1));
-  } else if (tab === "premium") {
-    sectionTitle = "💎 Premium Episodes";
-    episodes = allEpisodes.filter((e) => !e.isFree);
-  }
+  const discoverSeries = seriesData.filter((s) => s.isReal).slice(0, 3);
 
   return (
-    <div className="px-4 py-4">
-      {/* Hero Banner — only on Discover */}
-      {tab === "discover" && (
-        <div className="relative rounded-xl overflow-hidden mb-6 h-56">
-          <img
-            src="/images/tbahd-hero.jpg"
-            alt={featured.title}
-            className="w-full h-full object-cover object-top"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
-          <div className="absolute bottom-4 left-4 right-4">
-            <h2 className="text-xl font-bold mt-1">{featured.title}</h2>
-            <p className="text-[#aaa] text-xs mt-1 line-clamp-2">
-              {featured.description}
-            </p>
-            <Link
-              href={`/series/${featured.id}/watch/1`}
-              className="inline-block mt-3 bg-[#D4AF37] text-black text-sm px-6 py-2 rounded-lg font-medium hover:bg-[#B8962E] transition"
-            >
-              Watch Now — Episode 1 Free
-            </Link>
+    <div className="min-h-screen pb-20">
+      {/* Hero / Trending Now */}
+      <div className="relative h-72 sm:h-80">
+        <img
+          src="/images/tbahd-hero.jpg"
+          alt={featured.title}
+          className="w-full h-full object-cover object-top"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/60 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 px-4 pb-5">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-[10px] bg-[#D4AF37] text-black px-2 py-0.5 rounded font-semibold uppercase tracking-wide">
+              Trending Now
+            </span>
           </div>
+          <h1 className="text-2xl sm:text-3xl font-bold leading-tight drop-shadow-lg">
+            {featured.title}
+          </h1>
+          <p className="text-[#ccc] text-xs sm:text-sm mt-2 line-clamp-2 max-w-xl">
+            {featured.description}
+          </p>
+          <Link
+            href={`/series/${featured.id}/watch/1`}
+            className="inline-flex items-center gap-2 mt-4 bg-[#D4AF37] text-black text-sm font-semibold px-6 py-3 rounded-lg hover:bg-[#B8962E] transition shadow-lg"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+            </svg>
+            Watch Now — Episode 1 Free
+          </Link>
         </div>
-      )}
+      </div>
 
-      {/* Premium teaser — only on Discover, drives subscriptions */}
-      {tab === "discover" && (
-        <section className="mb-6">
-          <h2 className="text-lg font-bold mb-3">Continue with Premium</h2>
-          <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
-            {episodes
-              .filter((e) => !e.isFree)
-              .slice(0, 4)
-              .map((ep) => (
-                <Link
-                  key={ep.number}
-                  href={`/series/${featured.id}/watch/${ep.number}`}
-                  className="flex-shrink-0 w-40"
-                >
-                  <div className="relative rounded-lg overflow-hidden">
-                    <img
-                      src={ep.thumbnail}
-                      alt={ep.title}
-                      className="w-full h-24 object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/55 flex items-center justify-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-[#D4AF37]" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  </div>
-                  <p className="text-xs mt-1 line-clamp-1">{ep.number}. {ep.title}</p>
-                </Link>
-              ))}
-          </div>
-        </section>
-      )}
-
-      {/* Episodes of the single series — free play, premium show lock to drive subs */}
-      <section className="mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-bold">{sectionTitle}</h2>
-          {tab === "discover" && (
-            <Link href="/subscribe" className="text-[#D4AF37] text-sm">
-              Subscribe
-            </Link>
-          )}
+      {/* Continue Watching */}
+      <section className="mt-6">
+        <div className="flex items-center justify-between px-4 mb-3">
+          <h2 className="text-lg font-bold">Continue Watching</h2>
         </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          {episodes.map((ep) => (
+        <div className="flex gap-3 overflow-x-auto scrollbar-hide px-4 pb-2">
+          {continueWatching.map((s) => (
             <Link
-              key={ep.number}
-              href={`/series/${featured.id}/watch/${ep.number}`}
-              className="relative rounded-lg overflow-hidden group"
+              key={s.id}
+              href={`/series/${s.id}`}
+              className="flex-shrink-0 w-36 sm:w-40"
             >
-              <div className="relative">
+              <div className="relative rounded-lg overflow-hidden">
                 <img
-                  src={ep.thumbnail}
-                  alt={ep.title}
-                  className="w-full h-28 object-cover"
+                  src={s.thumbnail}
+                  alt={s.title}
+                  className="w-full h-44 object-cover"
                 />
-                {/* Locked overlay for premium episodes */}
-                {!ep.isFree && (
-                  <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-[#D4AF37]" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-[#D4AF37] text-[10px] font-medium mt-1">Premium</span>
+                <div className="absolute bottom-2 left-2 right-2">
+                  <div className="h-1 bg-black/60 rounded-full overflow-hidden">
+                    <div className="h-full bg-[#D4AF37] w-2/3" />
                   </div>
-                )}
-                {ep.isFree && (
-                  <span className="absolute top-1 left-1 bg-[#D4AF37] text-black text-[9px] font-bold px-1.5 py-0.5 rounded">
-                    FREE
-                  </span>
-                )}
+                </div>
               </div>
-              <p className="text-xs mt-1 line-clamp-1 text-white">{ep.number}. {ep.title}</p>
-              <p className="text-[#888] text-[10px]">{ep.duration}</p>
+              <p className="text-xs mt-2 font-medium line-clamp-1">{s.title}</p>
+              <p className="text-[#888] text-[10px]">Episode 3 of {s.episodes}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* Discover */}
+      <section className="mt-6">
+        <div className="flex items-center justify-between px-4 mb-3">
+          <h2 className="text-lg font-bold">Discover</h2>
+          <Link href="/series" className="text-[#D4AF37] text-sm hover:underline">
+            See All
+          </Link>
+        </div>
+        <div className="flex gap-3 overflow-x-auto scrollbar-hide px-4 pb-2">
+          {discoverSeries.map((s) => (
+            <Link
+              key={s.id}
+              href={`/series/${s.id}`}
+              className="flex-shrink-0 w-36 sm:w-40"
+            >
+              <div className="relative rounded-lg overflow-hidden">
+                <img
+                  src={s.thumbnail}
+                  alt={s.title}
+                  className="w-full h-44 object-cover"
+                />
+                <div className="absolute top-2 left-2 flex flex-col gap-1">
+                  {s.isNew && (
+                    <span className="bg-[#D4AF37] text-black text-[9px] font-bold px-2 py-0.5 rounded">
+                      NEW
+                    </span>
+                  )}
+                  {s.isDubbed && (
+                    <span className="bg-black/70 text-white text-[9px] font-bold px-2 py-0.5 rounded">
+                      DUB
+                    </span>
+                  )}
+                </div>
+              </div>
+              <p className="text-xs mt-2 font-medium line-clamp-1">{s.title}</p>
+              <p className="text-[#888] text-[10px]">{s.views} views</p>
             </Link>
           ))}
         </div>
