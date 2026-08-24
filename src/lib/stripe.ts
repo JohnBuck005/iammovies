@@ -17,8 +17,8 @@ export type PlanId = "monthly" | "quarterly" | "yearly";
 
 export const PLAN_AMOUNTS: Record<PlanId, number> = {
   monthly: 999,
-  quarterly: 2499,
-  yearly: 7999,
+  quarterly: 2697,
+  yearly: 10190,
 };
 
 const INTERVALS: Record<PlanId, { interval: Stripe.Price.Recurring.Interval; count: number }> = {
