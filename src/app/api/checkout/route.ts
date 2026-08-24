@@ -6,7 +6,7 @@
  */
 
 import { NextRequest } from "next/server";
-import { getStripe, type PlanId } from "@/lib/stripe";
+import { getStripe, getPriceId, type PlanId } from "@/lib/stripe";
 
 const VALID_PLANS: PlanId[] = ["monthly", "quarterly", "yearly"];
 
