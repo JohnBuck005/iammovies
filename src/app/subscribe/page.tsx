@@ -4,31 +4,37 @@ import { useState } from "react";
 
 type PlanId = "monthly" | "quarterly" | "yearly";
 
-const PLANS: { id: PlanId; name: string; sub: string; price: string; unit: string; discount?: string; amount: number }[] = [
-  { id: "monthly", name: "Monthly", sub: "Billed monthly", price: "$9.99", unit: "/month", amount: 9.99 },
-  { id: "quarterly", name: "Quarterly", sub: "Billed every 3 months", price: "$26.97", unit: "/quarter", discount: "Save 10%", amount: 26.97 },
-  { id: "yearly", name: "Yearly", sub: "Billed annually", price: "$101.90", unit: "/year", discount: "Save 15%", amount: 101.90 },
+const PLANS: { id: PlanId; name: string; sub: string; price: string; unit: string; discount?: string }[] = [
+  { id: "monthly", name: "Monthly", sub: "Billed monthly", price: "$9.99", unit: "/month" },
+  { id: "quarterly", name: "Quarterly", sub: "Billed every 3 months", price: "$26.97", unit: "/quarter", discount: "Save 10%" },
+  { id: "yearly", name: "Yearly", sub: "Billed annually", price: "$101.90", unit: "/year", discount: "Save 15%" },
 ];
 
 export default function SubscribePage() {
   const [plan, setPlan] = useState<PlanId>("quarterly");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function goPayPal() {
-    const selected = PLANS.find((p) => p.id === plan)!;
-    const params = new URLSearchParams({
-      cmd: "_xclick-subscriptions",
-      business: "guedaliakitengie7@gmail.com",
-      amount: selected.amount.toFixed(2),
-      item_name: `IAmoviestory ${selected.name} Subscription`,
-      currency_code: "USD",
-      src: "1",
-      sra: "1",
-      no_note: "1",
-      no_shipping: "1",
-      return: "https://iamoviestory.com/subscribe?success=1",
-      cancel_return: "https://iamoviestory.com/subscribe?canceled=1",
-    });
-    window.location.href = `https://www.paypal.com/cgi-bin/webscr?${params.toString()}`;
+  async function goStripe() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) {
+        setError(data.error || "Checkout failed");
+        return;
+      }
+      window.location.href = data.url;
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -100,11 +106,14 @@ export default function SubscribePage() {
 
       {/* Subscribe button */}
       <button
-        onClick={goPayPal}
-        className="w-full bg-[#D4AF37] text-black py-4 rounded-xl font-bold text-lg hover:bg-[#B8962E] transition mb-4"
+        onClick={goStripe}
+        disabled={loading}
+        className="w-full bg-[#D4AF37] text-black py-4 rounded-xl font-bold text-lg hover:bg-[#B8962E] transition mb-4 disabled:opacity-50"
       >
-        Subscribe with PayPal
+        {loading ? "Redirecting…" : "Subscribe with Stripe"}
       </button>
+
+      {error && <p className="text-red-400 text-sm text-center mb-4">{error}</p>}
 
       {/* Terms */}
       <div className="text-center">

@@ -1,17 +1,12 @@
 /**
  * POST /api/checkout
  *
- * Creates a LemonSqueezy checkout session for the requested plan
+ * Creates a Stripe Checkout Session for the requested plan
  * and returns the checkout URL to redirect the user to.
  */
 
 import { NextRequest } from "next/server";
-import {
-  getLemonApiKey,
-  getLemonStoreId,
-  LEMON_PRICE_IDS,
-  type PlanId,
-} from "@/lib/lemon";
+import { getStripe, type PlanId } from "@/lib/stripe";
 
 const VALID_PLANS: PlanId[] = ["monthly", "quarterly", "yearly"];
 
@@ -24,70 +19,24 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: "Invalid or missing plan" }, { status: 400 });
     }
 
-    const priceId = LEMON_PRICE_IDS[plan];
-    if (!priceId) {
-      return Response.json(
-        { error: `Price not configured for plan: ${plan}` },
-        { status: 500 }
-      );
-    }
-
+    const priceId = await getPriceId(plan);
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    const apiKey = getLemonApiKey();
 
-    // LemonSqueezy hosted checkout
-    const resp = await fetch(
-      `https://api.lemonsqueezy.com/v1/checkouts`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/vnd.api+json",
-          Accept: "application/vnd.api+json",
+    const session = await getStripe().checkout.sessions.create({
+      mode: "subscription",
+      payment_method_types: ["card"],
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
         },
-        body: JSON.stringify({
-          data: {
-            type: "checkouts",
-            attributes: {
-              checkout_data: {
-                custom: {
-                  user_plan: plan,
-                },
-              },
-              expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-            },
-            relationships: {
-              store: {
-                data: { type: "stores", id: getLemonStoreId() },
-              },
-              variant: {
-                data: { type: "variants", id: priceId },
-              },
-            },
-          },
-        }),
-      }
-    );
+      ],
+      metadata: { plan },
+      success_url: `${baseUrl}/subscribe?success=1`,
+      cancel_url: `${baseUrl}/subscribe?canceled=1`,
+    });
 
-    if (!resp.ok) {
-      const err = await resp.text();
-      return Response.json(
-        { error: `LemonSqueezy error: ${resp.status} ${err}` },
-        { status: 500 }
-      );
-    }
-
-    const data = await resp.json();
-    const checkoutUrl = data?.data?.attributes?.url;
-
-    if (!checkoutUrl) {
-      return Response.json(
-        { error: "No checkout URL returned from LemonSqueezy" },
-        { status: 500 }
-      );
-    }
-
-    return Response.json({ url: checkoutUrl });
+    return Response.json({ url: session.url });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Checkout failed";
     return Response.json({ error: message }, { status: 500 });
