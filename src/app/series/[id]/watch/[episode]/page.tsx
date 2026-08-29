@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import VideoPlayer from "@/components/VideoPlayer";
 import { getSeriesById, getEpisode, seriesData } from "@/data/series";
+import { getServerUserEmail, getSubscriptionStatus } from "@/lib/supabaseServer";
 
 type PageProps = {
   params: Promise<{ id: string; episode: string }>;
@@ -25,6 +26,11 @@ export default async function WatchPage({ params }: PageProps) {
 
   if (!series || !ep) return notFound();
 
+  const email = await getServerUserEmail();
+  const subStatus = email ? await getSubscriptionStatus({ email }) : "none";
+  const hasActiveSubscription = subStatus === "active" || subStatus === "trialing";
+  const isLocked = !ep.isFree && !hasActiveSubscription;
+
   return (
     <div className="min-h-screen">
       {/* Player */}
@@ -34,7 +40,7 @@ export default async function WatchPage({ params }: PageProps) {
           poster={ep.thumbnail || series.poster || series.thumbnail}
           title={`${series.title} — Ep ${ep.number}`}
           episodeNum={ep.number}
-          isLocked={!ep.isFree}
+          isLocked={isLocked}
           seriesId={series.id}
         />
       </div>
