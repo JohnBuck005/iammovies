@@ -50,7 +50,7 @@ export const seriesData: Series[] = [
       { number: 10, title: "The Reckoning", duration: "10:05", videoUrl: "/api/video?ep=10", isFree: false, thumbnail: "/images/episodes/tbahd-ep10.jpg" },
       { number: 11, title: "No Turning Back", duration: "10:00", videoUrl: "/api/video?ep=11", isFree: false, thumbnail: "/images/episodes/tbahd-ep11.jpg" },
       { number: 12, title: "Revelations", duration: "9:31", videoUrl: "/api/video?ep=12", isFree: false, thumbnail: "/images/episodes/tbahd-ep12.jpg" },
-      { number: 13, title: "Finale — Love Prevails", duration: "11:09", videoUrl: "/api/video?ep=13", isFree: false },
+      { number: 13, title: "Finale — Love Prevails", duration: "11:09", videoUrl: "/api/video?ep=13", isFree: false, thumbnail: "/images/episodes/tbahd-ep13.jpg" },
       { number: 14, title: "The Aftermath", duration: "9:16", videoUrl: null, isFree: false },
       { number: 15, title: "A New Beginning", duration: "10:18", videoUrl: null, isFree: false },
       { number: 16, title: "Ep 16", duration: "10:18", videoUrl: null, isFree: false },
