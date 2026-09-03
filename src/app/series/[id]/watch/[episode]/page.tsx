@@ -4,11 +4,18 @@ import VideoPlayer from "@/components/VideoPlayer";
 import { getSeriesById, getEpisode, seriesData } from "@/data/series";
 import { getMergedEpisode } from "@/lib/episodes";
 import { getServerUserEmail, getSubscriptionStatus } from "@/lib/supabaseServer";
+import { EPISODE_GUIDS, PULLZONE } from "@/lib/bunny";
 import type { Metadata } from "next";
 
 type PageProps = {
   params: Promise<{ id: string; episode: string }>;
 };
+
+function getBunnyThumbnailUrl(episodeNumber: number): string | null {
+  const guid = EPISODE_GUIDS[episodeNumber];
+  if (!guid) return null;
+  return `https://${PULLZONE}/${guid}/thumbnail.jpg`;
+}
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id, episode } = await params;
@@ -25,7 +32,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       url: `/series/${id}/watch/${episode}`,
       images: [
         {
-          url: ep.thumbnail || series.poster || series.thumbnail,
+          url: ep.thumbnail || getBunnyThumbnailUrl(ep.number) || series.poster || series.thumbnail,
           width: 1200,
           height: 630,
           alt: `${series.title} Episode ${ep.number}`,
@@ -36,7 +43,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       card: "summary_large_image",
       title: `${series.title} — Ep ${ep.number}: ${ep.title}`,
       description: `${series.title}. Episode ${ep.number}: ${ep.title}.`,
-      images: [ep.thumbnail || series.poster || series.thumbnail],
+      images: [ep.thumbnail || getBunnyThumbnailUrl(ep.number) || series.poster || series.thumbnail],
     },
   };
 }
@@ -74,7 +81,7 @@ export default async function WatchPage({ params }: PageProps) {
       <div className="px-4 pt-4">
         <VideoPlayer
           src={ep.videoUrl || undefined}
-          poster={ep.thumbnail || series.poster || series.thumbnail}
+          poster={ep.thumbnail || getBunnyThumbnailUrl(ep.number) || series.poster || series.thumbnail}
           title={`${series.title} — Ep ${ep.number}`}
           episodeNum={ep.number}
           isLocked={isLocked}
