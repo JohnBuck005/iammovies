@@ -1,3 +1,4 @@
+import { getMergedSeriesById } from "@/lib/episodes";
 import { seriesData, getSeriesById } from "@/data/series";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -5,7 +6,7 @@ import WatchlistButton from "@/components/WatchlistButton";
 import ShareButton from "@/components/ShareButton";
 import type { Metadata } from "next";
 
-export function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   return params.then(({ id }) => {
     const series = getSeriesById(id);
     if (!series) return { title: "Not Found" };
@@ -44,7 +45,8 @@ export async function generateStaticParams() {
 
 export default async function SeriesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const series = getSeriesById(id);
+  const seriesPromise = getMergedSeriesById(id);
+  const series = await seriesPromise;
 
   if (!series) {
     notFound();

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import VideoPlayer from "@/components/VideoPlayer";
 import { getSeriesById, getEpisode, seriesData } from "@/data/series";
+import { getMergedEpisode } from "@/lib/episodes";
 import { getServerUserEmail, getSubscriptionStatus } from "@/lib/supabaseServer";
 import type { Metadata } from "next";
 
@@ -54,22 +55,25 @@ export async function generateStaticParams() {
 export default async function WatchPage({ params }: PageProps) {
   const { id, episode } = await params;
   const series = getSeriesById(id);
-  const ep = getEpisode(id, Number(episode));
+  const baseEp = getEpisode(id, Number(episode));
 
-  if (!series || !ep) return notFound();
+  if (!series || !baseEp) return notFound();
 
   const email = await getServerUserEmail();
   const subStatus = email ? await getSubscriptionStatus({ email }) : "none";
   const hasActiveSubscription = subStatus === "active" || subStatus === "trialing";
   const firstFiveFree = Number(episode) <= 5;
-  const isLocked = !firstFiveFree && !ep.isFree && !hasActiveSubscription;
+  const isLocked = !firstFiveFree && !baseEp.isFree && !hasActiveSubscription;
+
+  const mergedEp = await getMergedEpisode(id, Number(episode));
+  const ep = mergedEp ? { ...baseEp, ...mergedEp } : baseEp;
 
   return (
     <div className="min-h-screen">
       {/* Player */}
       <div className="px-4 pt-4">
         <VideoPlayer
-          videoUrl={ep.videoUrl}
+          src={ep.videoUrl || undefined}
           poster={ep.thumbnail || series.poster || series.thumbnail}
           title={`${series.title} — Ep ${ep.number}`}
           episodeNum={ep.number}
