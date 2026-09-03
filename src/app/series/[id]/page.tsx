@@ -2,9 +2,41 @@ import { seriesData, getSeriesById } from "@/data/series";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import WatchlistButton from "@/components/WatchlistButton";
+import ShareButton from "@/components/ShareButton";
+import type { Metadata } from "next";
 
-// Generate static params for all series
-export function generateStaticParams() {
+export function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  return params.then(({ id }) => {
+    const series = getSeriesById(id);
+    if (!series) return { title: "Not Found" };
+    return {
+      title: `${series.title} — IAmoviestory`,
+      description: series.description,
+      openGraph: {
+        title: `${series.title} — IAmoviestory`,
+        description: series.description,
+        type: "website",
+        url: `/series/${series.id}`,
+        images: [
+          {
+            url: series.poster || series.thumbnail,
+            width: 1200,
+            height: 630,
+            alt: series.title,
+          },
+        ],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: `${series.title} — IAmoviestory`,
+        description: series.description,
+        images: [series.poster || series.thumbnail],
+      },
+    };
+  });
+}
+
+export async function generateStaticParams() {
   return seriesData.map((series) => ({
     id: series.id,
   }));
@@ -96,11 +128,10 @@ export default async function SeriesPage({ params }: { params: Promise<{ id: str
                 <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
               </svg>
             </button>
-            <button className="w-12 h-12 rounded-lg bg-black/50 border border-[#444] flex items-center justify-center hover:bg-[#1a1a1a] transition backdrop-blur-sm" aria-label="Share">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
-              </svg>
-            </button>
+            <ShareButton
+              url={`${process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000"}/series/${series.id}`}
+              title={series.title}
+            />
           </div>
         </div>
       </div>

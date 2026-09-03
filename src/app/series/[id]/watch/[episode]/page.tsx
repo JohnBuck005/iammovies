@@ -3,10 +3,42 @@ import Link from "next/link";
 import VideoPlayer from "@/components/VideoPlayer";
 import { getSeriesById, getEpisode, seriesData } from "@/data/series";
 import { getServerUserEmail, getSubscriptionStatus } from "@/lib/supabaseServer";
+import type { Metadata } from "next";
 
 type PageProps = {
   params: Promise<{ id: string; episode: string }>;
 };
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id, episode } = await params;
+  const series = getSeriesById(id);
+  const ep = getEpisode(id, Number(episode));
+  if (!series || !ep) return { title: "Not Found" };
+  return {
+    title: `${series.title} — Ep ${ep.number}: ${ep.title}`,
+    description: `${series.title}. Episode ${ep.number}: ${ep.title}. Watch on IAmoviestory.`,
+    openGraph: {
+      title: `${series.title} — Ep ${ep.number}: ${ep.title}`,
+      description: `${series.title}. Episode ${ep.number}: ${ep.title}. Watch on IAmoviestory.`,
+      type: "video.episode",
+      url: `/series/${id}/watch/${episode}`,
+      images: [
+        {
+          url: ep.thumbnail || series.poster || series.thumbnail,
+          width: 1200,
+          height: 630,
+          alt: `${series.title} Episode ${ep.number}`,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${series.title} — Ep ${ep.number}: ${ep.title}`,
+      description: `${series.title}. Episode ${ep.number}: ${ep.title}.`,
+      images: [ep.thumbnail || series.poster || series.thumbnail],
+    },
+  };
+}
 
 export async function generateStaticParams() {
   const params: { id: string; episode: string }[] = [];
@@ -29,7 +61,8 @@ export default async function WatchPage({ params }: PageProps) {
   const email = await getServerUserEmail();
   const subStatus = email ? await getSubscriptionStatus({ email }) : "none";
   const hasActiveSubscription = subStatus === "active" || subStatus === "trialing";
-  const isLocked = !ep.isFree && !hasActiveSubscription;
+  const firstFiveFree = Number(episode) <= 5;
+  const isLocked = !firstFiveFree && !ep.isFree && !hasActiveSubscription;
 
   return (
     <div className="min-h-screen">
@@ -58,7 +91,7 @@ export default async function WatchPage({ params }: PageProps) {
           Ep {ep.number}: {ep.title}
         </p>
 
-        {!ep.isFree && (
+        {isLocked && (
           <div className="mt-4 rounded-lg border border-[#D4AF37]/40 bg-[#D4AF37]/10 p-4 text-sm text-[#D4AF37]">
             Premium episode.{" "}
             <Link href="/subscribe" className="underline">
