@@ -219,7 +219,7 @@ export default function SubscribePage() {
             </p>
             <div className="text-center">
               <a
-                href={process.env.NEXT_PUBLIC_PAYPAL_ME_LINK || "https://paypal.me"}
+                href={process.env.NEXT_PUBLIC_PAYPAL_ME_LINK || "https://paypal.me/guedaliakitengie7"}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-block bg-[#FFC439] text-black px-6 py-3 rounded-lg text-sm font-bold hover:bg-[#e6b030] transition"
