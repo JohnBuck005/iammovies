@@ -32,13 +32,17 @@ export default function SubscribePage() {
   const [error, setError] = useState<string | null>(null);
   const [paypalReady, setPaypalReady] = useState(false);
 
+  const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || "";
+  const hasAutoCheckout = !!paypalClientId;
+
   useEffect(() => {
     setSuccess(getQueryParam("success") === "1");
     setCanceled(getQueryParam("canceled") === "1");
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (!hasAutoCheckout || typeof window === "undefined") return;
+
     const existing = document.querySelector('script[src*="paypal.com/sdk"]');
     if (existing) {
       setPaypalReady(true);
@@ -46,9 +50,8 @@ export default function SubscribePage() {
       return;
     }
 
-    const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || "test";
     const script = document.createElement("script");
-    script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD&intent=capture`;
+    script.src = `https://www.paypal.com/sdk/js?client-id=${paypalClientId}&currency=USD&intent=capture`;
     script.onload = () => {
       setPaypalReady(true);
       renderButtons();
@@ -105,7 +108,7 @@ export default function SubscribePage() {
         },
       }).render(container);
     }
-  }, [plan]);
+  }, [plan, hasAutoCheckout]);
 
   return (
     <div className="px-4 py-6">
@@ -186,30 +189,50 @@ export default function SubscribePage() {
             })}
           </div>
 
-          {/* PayPal */}
-          <div className="bg-[#1a1a1a] rounded-xl p-5 border border-[#333]">
-            <h3 className="font-bold text-center mb-2">Pay with PayPal</h3>
-            <p className="text-[#aaa] text-xs text-center mb-4">
-              Instant access after payment. Subscription auto-renews.
-            </p>
+          {/* PayPal auto-checkout */}
+          {hasAutoCheckout ? (
+            <div className="bg-[#1a1a1a] rounded-xl p-5 border border-[#333] mb-4">
+              <h3 className="font-bold text-center mb-2">Pay with PayPal</h3>
+              <p className="text-[#aaa] text-xs text-center mb-4">
+                Instant access after payment. Subscription auto-renews.
+              </p>
 
-            <div
-              id="paypal-button-container"
-              data-plan={plan}
-              data-loading={loading ? "true" : "false"}
-            />
+              <div
+                id="paypal-button-container"
+                data-plan={plan}
+                data-loading={loading ? "true" : "false"}
+              />
 
-            {!paypalReady && (
-              <div className="text-center text-xs text-[#888]">Loading checkout…</div>
-            )}
+              {!paypalReady && (
+                <div className="text-center text-xs text-[#888]">Loading checkout…</div>
+              )}
 
-            {error && <p className="text-red-400 text-xs text-center mt-3">{error}</p>}
-
-            <div className="text-center mt-4">
-              <Link href="/claim" className="text-xs text-[#D4AF37] hover:underline">
-                Paid by another method? Submit proof here →
-              </Link>
+              {error && <p className="text-red-400 text-xs text-center mt-3">{error}</p>}
             </div>
+          ) : null}
+
+          {/* PayPal.Me fallback */}
+          <div className="bg-[#1a1a1a] rounded-xl p-5 border border-[#333] mb-4">
+            <h3 className="font-bold text-center mb-2">Pay with PayPal.Me</h3>
+            <p className="text-[#aaa] text-xs text-center mb-4">
+              Send payment manually, then submit proof below for access.
+            </p>
+            <div className="text-center">
+              <a
+                href={process.env.NEXT_PUBLIC_PAYPAL_ME_LINK || "https://paypal.me"}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-block bg-[#FFC439] text-black px-6 py-3 rounded-lg text-sm font-bold hover:bg-[#e6b030] transition"
+              >
+                Pay with PayPal.Me
+              </a>
+            </div>
+          </div>
+
+          <div className="text-center mt-4 mb-6">
+            <Link href="/claim" className="text-xs text-[#D4AF37] hover:underline">
+              Already paid? Submit proof here →
+            </Link>
           </div>
 
           {/* Terms */}
