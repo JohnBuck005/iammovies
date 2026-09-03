@@ -172,6 +172,9 @@ export default function AdminDashboard() {
               <Link href="/admin/upload" className="text-xs bg-[#222] border border-[#333] p-3 rounded-lg text-center hover:bg-[#2a2a2a] transition">
                 Upload Episode
               </Link>
+              <Link href="/admin/db-check" className="text-xs bg-[#222] border border-[#333] p-3 rounded-lg text-center hover:bg-[#2a2a2a] transition">
+                Check DB Tables
+              </Link>
               <Link href="/" className="text-xs bg-[#222] border border-[#333] p-3 rounded-lg text-center hover:bg-[#2a2a2a] transition">
                 View Site
               </Link>
