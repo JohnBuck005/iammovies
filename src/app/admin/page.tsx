@@ -169,6 +169,9 @@ export default function AdminDashboard() {
               <Link href="/admin/claims" className="text-xs bg-[#222] border border-[#333] p-3 rounded-lg text-center hover:bg-[#2a2a2a] transition">
                 Review Claims
               </Link>
+              <Link href="/admin/upload" className="text-xs bg-[#222] border border-[#333] p-3 rounded-lg text-center hover:bg-[#2a2a2a] transition">
+                Upload Episode
+              </Link>
               <Link href="/" className="text-xs bg-[#222] border border-[#333] p-3 rounded-lg text-center hover:bg-[#2a2a2a] transition">
                 View Site
               </Link>
