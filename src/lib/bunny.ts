@@ -5,7 +5,6 @@
 import crypto from "crypto";
 
 const PULLZONE = process.env.BUNNY_PULLZONE_HOST || "vz-1952386c-8a4.b-cdn.net";
-export { PULLZONE };
 
 // episode number -> Bunny Stream video GUID (library 712470)
 export const EPISODE_GUIDS: Record<number, string> = {

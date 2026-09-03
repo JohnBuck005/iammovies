@@ -4,14 +4,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import WatchlistButton from "@/components/WatchlistButton";
 import ShareButton from "@/components/ShareButton";
-import { EPISODE_GUIDS, PULLZONE } from "@/lib/bunny";
 import type { Metadata } from "next";
-
-function getBunnyThumbnailUrl(episodeNumber: number): string | null {
-  const guid = EPISODE_GUIDS[episodeNumber];
-  if (!guid) return null;
-  return `https://${PULLZONE}/${guid}/thumbnail.jpg`;
-}
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   return params.then(({ id }) => {
@@ -66,7 +59,7 @@ export default async function SeriesPage({ params }: { params: Promise<{ id: str
         title: e.title,
         duration: e.duration,
         isFree: e.isFree,
-        thumbnail: e.thumbnail || getBunnyThumbnailUrl(e.number) || series.thumbnail,
+        thumbnail: e.thumbnail || series.thumbnail,
       }))
     : Array.from({ length: series.episodes }, (_, i) => ({
         number: i + 1,

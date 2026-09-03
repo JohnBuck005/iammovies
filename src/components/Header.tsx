@@ -4,17 +4,6 @@ import { useState } from "react";
 import { useSearchParams, usePathname } from "next/navigation";
 import Link from "next/link";
 import { seriesData } from "@/data/series";
-import { EPISODE_GUIDS, PULLZONE } from "@/lib/bunny";
-
-function getBunnyThumbnailUrl(episodeNumber: number): string | null {
-  const guid = EPISODE_GUIDS[episodeNumber];
-  if (!guid) return null;
-  return `https://${PULLZONE}/${guid}/thumbnail.jpg`;
-}
-
-function getEpisodeThumbnail(episodeNumber: number, localThumbnail?: string, seriesThumbnail?: string): string {
-  return getBunnyThumbnailUrl(episodeNumber) || localThumbnail || seriesThumbnail || "";
-}
 
 const TABS = [
   { key: "discover", label: "Discover", icon: null },
@@ -103,7 +92,7 @@ export default function Header() {
                     href={`/series/${series.id}/watch/${episode.number}`}
                     className="flex items-center gap-3 p-3 hover:bg-[#222] transition border-b border-[#222] last:border-0"
                   >
-                    <img src={episode.thumbnail || getBunnyThumbnailUrl(episode.number) || series.thumbnail} alt={episode.title} className="w-10 h-14 object-cover rounded" />
+                    <img src={episode.thumbnail || series.thumbnail} alt={episode.title} className="w-10 h-14 object-cover rounded" />
                     <div className="min-w-0">
                       <p className="text-sm font-medium line-clamp-1">{episode.title}</p>
                       <p className="text-[#888] text-xs">{series.title} · Episode {episode.number}</p>
