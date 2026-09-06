@@ -77,7 +77,7 @@ export default function AdminUploadPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Upload Episode</h1>
-          <p className="text-xs text-[#888] mt-1">Adds to series.ts and commits via GitHub.</p>
+          <p className="text-xs text-[#888] mt-1">Saves to Supabase database. Changes are live immediately.</p>
         </div>
       </div>
 
