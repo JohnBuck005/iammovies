@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Database unavailable" }, { status: 500 });
     }
 
-    const videoUrl =
+    const normalizedVideoUrl =
       videoUrl.trim() || series.episodeList?.find((e) => e.number === episodeNumber)?.videoUrl || null;
     const thumb = thumbnailUrl || `/images/episodes/${seriesId === "baby-at-her-door" ? "tbahd" : seriesId}-ep${episodeNumber}.jpg`;
     const cover = coverUrl || null;
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
           number: episodeNumber,
           title,
           duration,
-          video_url: videoUrl,
+          video_url: normalizedVideoUrl,
           is_free: episodeNumber <= 5,
           thumbnail: thumb,
           cover,
