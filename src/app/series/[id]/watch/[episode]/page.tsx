@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import VideoPlayer from "@/components/VideoPlayer";
 import { getSeriesById, getEpisode, seriesData } from "@/data/series";
@@ -69,8 +70,10 @@ export default async function WatchPage({ params }: PageProps) {
   const email = await getServerUserEmail();
   const subStatus = email ? await getSubscriptionStatus({ email }) : "none";
   const hasActiveSubscription = subStatus === "active" || subStatus === "trialing";
+  const cookieStore = await cookies();
+  const isAdmin = cookieStore.get("iam_admin")?.value === "1";
   const firstFiveFree = Number(episode) <= 5;
-  const isLocked = !firstFiveFree && !baseEp.isFree && !hasActiveSubscription;
+  const isLocked = !isAdmin && !firstFiveFree && !baseEp.isFree && !hasActiveSubscription;
 
   const mergedEp = await getMergedEpisode(id, Number(episode));
   const ep = mergedEp ? { ...baseEp, ...mergedEp } : baseEp;
