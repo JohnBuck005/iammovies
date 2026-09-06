@@ -80,7 +80,7 @@ export default async function WatchPage({ params }: PageProps) {
       {/* Player */}
       <div className="px-4 pt-4">
         <VideoPlayer
-          src={ep.videoUrl || undefined}
+          videoUrl={ep.videoUrl || undefined}
           poster={ep.thumbnail || getBunnyThumbnailUrl(ep.number) || series.poster || series.thumbnail}
           title={`${series.title} — Ep ${ep.number}`}
           episodeNum={ep.number}
