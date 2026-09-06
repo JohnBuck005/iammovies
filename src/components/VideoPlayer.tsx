@@ -89,12 +89,14 @@ export default function VideoPlayer({
           width: level.width,
           label: `${level.height}p`,
         }));
+        console.log("Parsed levels:", parsed);
         setLevels(parsed);
 
         // Start at 720p if available, otherwise highest quality
         const level720 = parsed.find((l) => l.height >= 720);
         const startIndex = level720 ? level720.index : parsed.length - 1;
         hls.startLevel = startIndex;
+        hls.nextLevel = startIndex;
         setCurrentLevel(startIndex);
       });
 
@@ -180,15 +182,16 @@ export default function VideoPlayer({
             <p className="text-red-400 text-sm">Could not load video: {loadErr}</p>
           </div>
         )}
-        {levels.length > 0 && !loadErr && (
-          <div className="absolute top-3 right-3 z-10">
+        {levels.length > 0 && (
+          <div className="absolute top-3 right-3 z-20">
             <select
               value={currentLevel}
               onChange={(e) => handleQualityChange(Number(e.target.value))}
-              className="bg-black/70 text-white text-xs rounded-lg border border-white/20 px-2 py-1.5 backdrop-blur-sm"
+              className="bg-black/80 text-white text-[11px] font-medium rounded-md border border-white/30 px-2 py-1 backdrop-blur-md appearance-none cursor-pointer"
+              style={{ textAlignLast: 'center' }}
             >
               <option value={-1}>Auto{autoLevel ? ` (720p)` : ""}</option>
-              {levels.map((l) => (
+              {levels.slice().reverse().map((l) => (
                 <option key={l.index} value={l.index}>
                   {l.label}
                 </option>
