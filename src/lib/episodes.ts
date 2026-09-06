@@ -15,11 +15,13 @@ function withDbEpisodes<T extends Series>(series: T, dbEpisodes: Array<{ number:
       ...ep,
       title: db.title || ep.title,
       duration: db.duration || ep.duration,
-      videoUrl: db.video_url ?? ep.videoUrl,
+      // Preserve existing static URL if the DB value is blank/null.
+      // Only override when DB has an actual non-empty URL.
+      videoUrl: db.video_url && db.video_url.trim() ? db.video_url.trim() : ep.videoUrl,
       isFree: db.is_free ?? ep.isFree,
       thumbnail: db.thumbnail || ep.thumbnail,
       cover: db.cover || ep.cover,
-      hasDbOverride: true,
+      hasDbOverride: !!db.video_url && db.video_url.trim(),
     };
   });
   for (const db of dbEpisodes) {
@@ -28,11 +30,12 @@ function withDbEpisodes<T extends Series>(series: T, dbEpisodes: Array<{ number:
         number: db.number,
         title: db.title,
         duration: db.duration,
-        videoUrl: db.video_url,
+        // Skip appending entirely if DB record has no usable video URL.
+        videoUrl: db.video_url && db.video_url.trim() ? db.video_url.trim() : undefined,
         isFree: db.is_free,
         thumbnail: db.thumbnail || undefined,
         cover: db.cover || undefined,
-        hasDbOverride: true,
+        hasDbOverride: !!db.video_url && db.video_url.trim(),
       });
     }
   }
