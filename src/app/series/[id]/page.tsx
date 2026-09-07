@@ -116,7 +116,7 @@ export default async function SeriesPage({ params }: { params: Promise<{ id: str
           <h1 className="text-3xl font-bold leading-tight drop-shadow-lg">{series.title}</h1>
           <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-2 text-sm text-[#ccc]">
             <span className="genre-badge">{series.genre}</span>
-            <span>{series.episodes} Episodes</span>
+            <span>{episodes.length} Episodes</span>
             <span>{series.views} views</span>
             <span className="text-[#D4AF37]">⭐ {series.rating}</span>
           </div>
