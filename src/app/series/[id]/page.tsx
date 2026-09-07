@@ -67,14 +67,15 @@ export default async function SeriesPage({ params }: { params: Promise<{ id: str
         number: e.number,
         title: e.title,
         duration: e.duration,
-        isFree: e.isFree,
+        // The first five episodes are the only free episodes.
+        isFree: e.number <= 5,
         thumbnail: e.thumbnail || getBunnyThumbnailUrl(e.number) || series.thumbnail,
       }))
     : Array.from({ length: series.episodes }, (_, i) => ({
         number: i + 1,
         title: `Episode ${i + 1}`,
         duration: `${((i % 3) + 3)}:${String((i * 7) % 60).padStart(2, "0")}`,
-        isFree: i < 2,
+        isFree: i < 5,
         thumbnail: series.thumbnail,
       }));
 

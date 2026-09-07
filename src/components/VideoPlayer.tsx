@@ -147,7 +147,7 @@ export default function VideoPlayer({
           >
             🔓 Subscribe to Unlock
           </Link>
-          <p className="text-[#666] text-xs mt-3">Episodes 1 & 2 are free to watch</p>
+          <p className="text-[#666] text-xs mt-3">Episodes 1–5 are free to watch</p>
         </div>
       </div>
     );

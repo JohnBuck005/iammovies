@@ -7,10 +7,10 @@ import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: "IAmoviestory - Short Drama Streaming",
-  description: "Watch captivating short drama series. First two episodes free on every series.",
+  description: "Watch captivating short drama series. Episodes 1–5 are free on every series.",
   openGraph: {
     title: "IAmoviestory - Short Drama Streaming",
-    description: "Watch captivating short drama series. First two episodes free on every series.",
+    description: "Watch captivating short drama series. Episodes 1–5 are free on every series.",
     type: "website",
     url: "/",
     images: [
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "IAmoviestory - Short Drama Streaming",
-    description: "Watch captivating short drama series. First two episodes free on every series.",
+    description: "Watch captivating short drama series. Episodes 1–5 are free on every series.",
     images: ["/images/iamoviestory-logo.jpg"],
   },
 };

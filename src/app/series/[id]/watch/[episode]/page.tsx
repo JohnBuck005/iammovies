@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import VideoPlayer from "@/components/VideoPlayer";
 import { getSeriesById, getEpisode, seriesData } from "@/data/series";
-import { getMergedEpisode } from "@/lib/episodes";
+import { getMergedSeriesById } from "@/lib/episodes";
 import { getServerUserEmail, getSubscriptionStatus } from "@/lib/supabaseServer";
 import { EPISODE_GUIDS, PULLZONE } from "@/lib/bunny";
 import type { Metadata } from "next";
@@ -73,9 +73,12 @@ export default async function WatchPage({ params }: PageProps) {
   const cookieStore = await cookies();
   const isAdmin = cookieStore.get("iam_admin")?.value === "1";
   const firstFiveFree = Number(episode) <= 5;
-  const isLocked = !isAdmin && !firstFiveFree && !baseEp.isFree && !hasActiveSubscription;
+  // Keep the paywall policy tied to the episode number so DB/static flags
+  // cannot accidentally make a newer episode free.
+  const isLocked = !isAdmin && !firstFiveFree && !hasActiveSubscription;
 
-  const mergedEp = await getMergedEpisode(id, Number(episode));
+  const mergedSeries = await getMergedSeriesById(id);
+  const mergedEp = mergedSeries?.episodeList?.find((candidate) => candidate.number === Number(episode));
   const ep = mergedEp ? { ...baseEp, ...mergedEp } : baseEp;
 
   return (
