@@ -7,6 +7,8 @@ import ShareButton from "@/components/ShareButton";
 import { EPISODE_GUIDS, PULLZONE } from "@/lib/bunny";
 import type { Metadata } from "next";
 
+export const dynamic = "force-dynamic";
+
 function getBunnyThumbnailUrl(episodeNumber: number): string | null {
   const guid = EPISODE_GUIDS[episodeNumber];
   if (!guid) return null;
