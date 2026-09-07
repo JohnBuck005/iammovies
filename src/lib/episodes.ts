@@ -24,8 +24,9 @@ function withDbEpisodes<T extends Series>(series: T, dbEpisodes: Array<{ number:
       hasDbOverride: !!db.video_url && db.video_url.trim(),
     };
   });
+  const baseNumbers = new Set(baseList.map((ep) => ep.number));
   for (const db of dbEpisodes) {
-    if (!map.has(db.number)) {
+    if (!baseNumbers.has(db.number)) {
       merged.push({
         number: db.number,
         title: db.title,
