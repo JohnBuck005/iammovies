@@ -69,7 +69,7 @@ export const seriesData: Series[] = [
     isReal: true,
     // Episode 1 free, Episode 2 premium.
     freeEpisodes: 1,
-    thumbnail: "/images/daughter-hero.jpg",
+    thumbnail: "/images/daughter-cover.jpg",
     poster: "/images/daughter-poster.jpg",
     description:
       "A young woman's life is upended when she discovers the father she was raised to believe was gone is alive, wealthy, and living in New York. Drawn into a world of old money, art and long-kept secrets — from Manhattan to Boston to Los Angeles — she must decide how much of the truth she can bear, and who in her new family is really on her side.",
