@@ -5,23 +5,25 @@ import VideoPlayer from "@/components/VideoPlayer";
 import { getSeriesById, getEpisode, seriesData } from "@/data/series";
 import { getMergedSeriesById } from "@/lib/episodes";
 import { getServerUserEmail, getSubscriptionStatus } from "@/lib/supabaseServer";
-import { EPISODE_GUIDS, PULLZONE } from "@/lib/bunny";
+import { getEpisodeGuid, PULLZONE } from "@/lib/bunny";
 import type { Metadata } from "next";
 
 type PageProps = {
   params: Promise<{ id: string; episode: string }>;
 };
 
-function getBunnyThumbnailUrl(episodeNumber: number): string | null {
-  const guid = EPISODE_GUIDS[episodeNumber];
+function getBunnyThumbnailUrl(episodeNumber: number, seriesId: string): string | null {
+  const guid = getEpisodeGuid(episodeNumber, seriesId);
   if (!guid) return null;
   return `https://${PULLZONE}/${guid}/thumbnail.jpg`;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id, episode } = await params;
+  const epNum = Number(episode);
   const series = getSeriesById(id);
-  const ep = getEpisode(id, Number(episode));
+  const merged = await getMergedSeriesById(id);
+  const ep = merged?.episodeList?.find((candidate) => candidate.number === epNum) ?? getEpisode(id, epNum);
   if (!series || !ep) return { title: "Not Found" };
   return {
     title: `${series.title} — Ep ${ep.number}: ${ep.title}`,
@@ -33,7 +35,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       url: `/series/${id}/watch/${episode}`,
       images: [
         {
-          url: ep.thumbnail || getBunnyThumbnailUrl(ep.number) || series.poster || series.thumbnail,
+          url: ep.thumbnail || getBunnyThumbnailUrl(ep.number, id) || series.poster || series.thumbnail,
           width: 1200,
           height: 630,
           alt: `${series.title} Episode ${ep.number}`,
@@ -44,7 +46,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       card: "summary_large_image",
       title: `${series.title} — Ep ${ep.number}: ${ep.title}`,
       description: `${series.title}. Episode ${ep.number}: ${ep.title}.`,
-      images: [ep.thumbnail || getBunnyThumbnailUrl(ep.number) || series.poster || series.thumbnail],
+      images: [ep.thumbnail || getBunnyThumbnailUrl(ep.number, id) || series.poster || series.thumbnail],
     },
   };
 }
@@ -62,24 +64,27 @@ export async function generateStaticParams() {
 
 export default async function WatchPage({ params }: PageProps) {
   const { id, episode } = await params;
+  const epNum = Number(episode);
   const series = getSeriesById(id);
-  const baseEp = getEpisode(id, Number(episode));
 
-  if (!series || !baseEp) return notFound();
+  // Resolve through the MERGED episode list, never the static one alone: episodes
+  // uploaded via the admin panel live only in the DB, so a static-only lookup 404s
+  // exactly the episodes the series page is already linking to.
+  const mergedSeries = await getMergedSeriesById(id);
+  const ep =
+    mergedSeries?.episodeList?.find((candidate) => candidate.number === epNum) ?? getEpisode(id, epNum);
+
+  if (!series || !ep) return notFound();
 
   const email = await getServerUserEmail();
   const subStatus = email ? await getSubscriptionStatus({ email }) : "none";
   const hasActiveSubscription = subStatus === "active" || subStatus === "trialing";
   const cookieStore = await cookies();
   const isAdmin = cookieStore.get("iam_admin")?.value === "1";
-  const firstFiveFree = Number(episode) <= 5;
-  // Keep the paywall policy tied to the episode number so DB/static flags
-  // cannot accidentally make a newer episode free.
-  const isLocked = !isAdmin && !firstFiveFree && !hasActiveSubscription;
-
-  const mergedSeries = await getMergedSeriesById(id);
-  const mergedEp = mergedSeries?.episodeList?.find((candidate) => candidate.number === Number(episode));
-  const ep = mergedEp ? { ...baseEp, ...mergedEp } : baseEp;
+  // Free-episode allowance stays a per-series NUMBER rule (never the isFree flags)
+  // so a DB or static flag cannot accidentally make a later episode free.
+  const freeAllowance = series.freeEpisodes ?? 5;
+  const isLocked = !isAdmin && epNum > freeAllowance && !hasActiveSubscription;
 
   return (
     <div className="min-h-screen">
@@ -87,11 +92,12 @@ export default async function WatchPage({ params }: PageProps) {
       <div className="px-4 pt-4">
         <VideoPlayer
           videoUrl={ep.videoUrl || undefined}
-          poster={ep.thumbnail || getBunnyThumbnailUrl(ep.number) || series.poster || series.thumbnail}
+          poster={ep.thumbnail || getBunnyThumbnailUrl(ep.number, series.id) || series.poster || series.thumbnail}
           title={`${series.title} — Ep ${ep.number}`}
           episodeNum={ep.number}
           isLocked={isLocked}
           seriesId={series.id}
+          freeEpisodes={freeAllowance}
         />
       </div>
 

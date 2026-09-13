@@ -12,6 +12,7 @@ interface VideoPlayerProps {
   episodeNum: number;
   isLocked: boolean;
   seriesId: string;
+  freeEpisodes?: number;
 }
 
 type QualityLevel = {
@@ -28,7 +29,16 @@ export default function VideoPlayer({
   episodeNum,
   isLocked,
   seriesId,
+  freeEpisodes = 5,
 }: VideoPlayerProps) {
+  // Paywall copy follows the series' own allowance — a hardcoded "1–5" is wrong
+  // for any series with a different free-episode count.
+  const freeLine =
+    freeEpisodes <= 0
+      ? "Subscribe to watch every episode"
+      : freeEpisodes === 1
+        ? "Episode 1 is free to watch"
+        : `Episodes 1–${freeEpisodes} are free to watch`;
   const [showPaywall, setShowPaywall] = useState(false);
   const [hlsUrl, setHlsUrl] = useState<string | null>(null);
   const [loadErr, setLoadErr] = useState<string | null>(null);
@@ -147,7 +157,7 @@ export default function VideoPlayer({
           >
             🔓 Subscribe to Unlock
           </Link>
-          <p className="text-[#666] text-xs mt-3">Episodes 1–5 are free to watch</p>
+          <p className="text-[#666] text-xs mt-3">{freeLine}</p>
         </div>
       </div>
     );

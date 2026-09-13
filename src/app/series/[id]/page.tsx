@@ -4,13 +4,13 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import WatchlistButton from "@/components/WatchlistButton";
 import ShareButton from "@/components/ShareButton";
-import { EPISODE_GUIDS, PULLZONE } from "@/lib/bunny";
+import { getEpisodeGuid, PULLZONE } from "@/lib/bunny";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 
-function getBunnyThumbnailUrl(episodeNumber: number): string | null {
-  const guid = EPISODE_GUIDS[episodeNumber];
+function getBunnyThumbnailUrl(episodeNumber: number, seriesId: string): string | null {
+  const guid = getEpisodeGuid(episodeNumber, seriesId);
   if (!guid) return null;
   return `https://${PULLZONE}/${guid}/thumbnail.jpg`;
 }
@@ -67,15 +67,16 @@ export default async function SeriesPage({ params }: { params: Promise<{ id: str
         number: e.number,
         title: e.title,
         duration: e.duration,
-        // The first five episodes are the only free episodes.
-        isFree: e.number <= 5,
-        thumbnail: e.thumbnail || getBunnyThumbnailUrl(e.number) || series.thumbnail,
+        // Free-episode allowance is per series (default 5). Still a NUMBER rule,
+        // so a DB/static flag cannot accidentally unlock a later episode.
+        isFree: e.number <= (series.freeEpisodes ?? 5),
+        thumbnail: e.thumbnail || getBunnyThumbnailUrl(e.number, series.id) || series.thumbnail,
       }))
     : Array.from({ length: series.episodes }, (_, i) => ({
         number: i + 1,
         title: `Episode ${i + 1}`,
         duration: `${((i % 3) + 3)}:${String((i * 7) % 60).padStart(2, "0")}`,
-        isFree: i < 5,
+        isFree: i < (series.freeEpisodes ?? 5),
         thumbnail: series.thumbnail,
       }));
 
