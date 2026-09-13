@@ -35,7 +35,6 @@ export const seriesData: Series[] = [
     genre: "Romance Drama",
     views: "4.7K",
     episodes: 16,
-    isNew: true,
     isReal: true,
     thumbnail: "/images/tbahd-hero.jpg",
     poster: "/images/tbahd-hero.jpg",
@@ -58,6 +57,26 @@ export const seriesData: Series[] = [
       { number: 14, title: "The Aftermath", duration: "9:16", videoUrl: null, isFree: false },
       { number: 15, title: "A New Beginning", duration: "10:18", videoUrl: null, isFree: false },
       { number: 16, title: "Ep 16", duration: "10:18", videoUrl: null, isFree: false },
+    ],
+  },
+  {
+    id: "the-daughter-he-never-knew",
+    title: "The Daughter He Never Knew",
+    genre: "Family Drama",
+    views: "0",
+    episodes: 2,
+    isNew: true,
+    isReal: true,
+    // Episode 1 free, Episode 2 premium.
+    freeEpisodes: 1,
+    thumbnail: "/images/daughter-hero.jpg",
+    poster: "/images/daughter-poster.jpg",
+    description:
+      "A young woman's life is upended when she discovers the father she was raised to believe was gone is alive, wealthy, and living in New York. Drawn into a world of old money, art and long-kept secrets — from Manhattan to Boston to Los Angeles — she must decide how much of the truth she can bear, and who in her new family is really on her side.",
+    rating: "4.8",
+    episodeList: [
+      { number: 1, title: "The Daughter He Never Knew", duration: "10:03", videoUrl: "/api/video?series=the-daughter-he-never-knew&ep=1", isFree: true, thumbnail: "/images/daughter-ep1.jpg" },
+      { number: 2, title: "The Family Portrait", duration: "10:09", videoUrl: "/api/video?series=the-daughter-he-never-knew&ep=2", isFree: false, thumbnail: "/images/daughter-ep2.jpg" },
     ],
   },
   {
@@ -182,26 +201,6 @@ export const seriesData: Series[] = [
       { number: 7, title: "Deadly Secret", duration: "7:10", videoUrl: null, isFree: false, thumbnail: "https://images.unsplash.com/photo-1494774157365-9e04c6720e47?w=400&h=600&fit=crop" },
       { number: 8, title: "The Confrontation", duration: "7:45", videoUrl: null, isFree: false, thumbnail: "https://images.unsplash.com/photo-1494774157365-9e04c6720e47?w=400&h=600&fit=crop" },
       { number: 9, title: "When Love Kills", duration: "8:20", videoUrl: null, isFree: false, thumbnail: "https://images.unsplash.com/photo-1494774157365-9e04c6720e47?w=400&h=600&fit=crop" },
-    ],
-  },
-  {
-    id: "the-daughter-he-never-knew",
-    title: "The Daughter He Never Knew",
-    genre: "Family Drama",
-    views: "0",
-    episodes: 2,
-    isNew: true,
-    isReal: true,
-    // Episode 1 free, Episode 2 premium.
-    freeEpisodes: 1,
-    thumbnail: "/images/daughter-hero.jpg",
-    poster: "/images/daughter-poster.jpg",
-    description:
-      "A young woman's life is upended when she discovers the father she was raised to believe was gone is alive, wealthy, and living in New York. Drawn into a world of old money, art and long-kept secrets \u2014 from Manhattan to Boston to Los Angeles \u2014 she must decide how much of the truth she can bear, and who in her new family is really on her side.",
-    rating: "4.8",
-    episodeList: [
-      { number: 1, title: "The Daughter He Never Knew", duration: "10:03", videoUrl: "/api/video?series=the-daughter-he-never-knew&ep=1", isFree: true, thumbnail: "/images/daughter-ep1.jpg" },
-      { number: 2, title: "The Family Portrait", duration: "10:09", videoUrl: "/api/video?series=the-daughter-he-never-knew&ep=2", isFree: false, thumbnail: "/images/daughter-ep2.jpg" },
     ],
   },
 ];
