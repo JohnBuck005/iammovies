@@ -64,10 +64,10 @@ export const seriesData: Series[] = [
     title: "The Daughter He Never Knew",
     genre: "Family Drama",
     views: "0",
-    episodes: 2,
+    episodes: 3,
     isNew: true,
     isReal: true,
-    // Episode 1 free, Episode 2 premium.
+    // Episode 1 free, Episode 2-3 premium.
     freeEpisodes: 1,
     thumbnail: "/images/daughter-cover.jpg",
     poster: "/images/daughter-poster.jpg",
@@ -77,6 +77,7 @@ export const seriesData: Series[] = [
     episodeList: [
       { number: 1, title: "The Daughter He Never Knew", duration: "10:03", videoUrl: "/api/video?series=the-daughter-he-never-knew&ep=1", isFree: true, thumbnail: "/images/daughter-ep1.jpg" },
       { number: 2, title: "The Family Portrait", duration: "10:09", videoUrl: "/api/video?series=the-daughter-he-never-knew&ep=2", isFree: false, thumbnail: "/images/daughter-ep2.jpg" },
+      { number: 3, title: "Campus Secrets", duration: "9:42", videoUrl: "/api/video?series=the-daughter-he-never-knew&ep=3", isFree: false, thumbnail: "/images/daughter-ep3.jpg" },
     ],
   },
   {
