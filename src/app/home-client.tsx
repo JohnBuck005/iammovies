@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { seriesData, getSeriesById } from "@/data/series";
+import { seriesData } from "@/data/series";
 import Link from "next/link";
 
 function parseViews(v: string): number {
@@ -15,8 +16,22 @@ export default function Home() {
   const searchParams = useSearchParams();
   const tab = searchParams.get("tab") ?? "discover";
 
-  const featured = getSeriesById("baby-at-her-door") || seriesData[0];
+  // The homepage hero rotates through the real (non-placeholder) series so
+  // every new show gets top billing instead of only the first one.
+  const featuredList = seriesData.filter((s) => s.isReal);
+  const [featuredIndex, setFeaturedIndex] = useState(0);
+  const featured = featuredList[featuredIndex] ?? featuredList[0] ?? seriesData[0];
   const featuredEpisodes = featured.episodeList ?? [];
+
+  // Auto-advance the hero.
+  useEffect(() => {
+    if (featuredList.length < 2) return;
+    const timer = setInterval(
+      () => setFeaturedIndex((i) => (i + 1) % featuredList.length),
+      8000
+    );
+    return () => clearInterval(timer);
+  }, [featuredList.length]);
 
   let filtered = seriesData;
   if (tab === "new") {
@@ -35,6 +50,7 @@ export default function Home() {
       {showHero && (
         <div className="relative w-full h-[75vh] sm:h-[80vh]">
           <img
+            key={featured.id}
             src={featured.poster || featured.thumbnail}
             alt={featured.title}
             className="w-full h-full object-cover object-top"
@@ -86,6 +102,25 @@ export default function Home() {
                 More Info
               </Link>
             </div>
+
+            {featuredList.length > 1 && (
+              <div className="flex items-center gap-2 mt-6">
+                {featuredList.map((s, i) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    aria-label={`Show ${s.title}`}
+                    aria-current={i === featuredIndex}
+                    onClick={() => setFeaturedIndex(i)}
+                    className={`h-1.5 rounded-full transition-all ${
+                      i === featuredIndex
+                        ? "w-8 bg-[#D4AF37]"
+                        : "w-4 bg-white/40 hover:bg-white/70"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
