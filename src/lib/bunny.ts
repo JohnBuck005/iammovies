@@ -37,6 +37,7 @@ export const SERIES_GUIDS: Record<string, Record<number, string>> = {
   "the-daughter-he-never-knew": {
     1: "10fc3aa1-9972-433c-926b-1b5bd1948af7",
     2: "ee49cdad-bcfb-4989-b9d4-15b3cf7d2884",
+    3: "7e050d78-d263-4747-8ecc-110801793ef4",
   },
 };
 
