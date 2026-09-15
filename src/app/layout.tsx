@@ -4,6 +4,7 @@ import BottomNav from "@/components/BottomNav";
 import Header from "@/components/Header";
 import { UserProvider } from "@/components/UserProvider";
 import { Suspense } from "react";
+import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 
 export const metadata: Metadata = {
   title: "IAmoviestory - Short Drama Streaming",
@@ -28,6 +29,7 @@ export const metadata: Metadata = {
     description: "Watch captivating short drama series. Free episodes on every series.",
     images: ["/images/iamoviestory-logo.jpg"],
   },
+  themeColor: "#0a0a0a",
 };
 
 export default function RootLayout({
@@ -38,6 +40,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen bg-[#0a0a0a] text-white">
+        <ServiceWorkerRegistration />
         <UserProvider>
           <Suspense fallback={<div className="h-[140px] bg-[#0a0a0a]" />}>
             <Header />
