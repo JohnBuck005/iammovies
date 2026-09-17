@@ -59,3 +59,14 @@ jobs:
           name: iamovies-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
           retention-days: 30
+
+      - name: Send APK to Telegram
+        if: success()
+        run: |
+          APK=$(find android/app/build/outputs/apk/debug -name "*.apk" | head -1)
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument" \
+            -F "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -F "document=@${APK}" \
+            -F "caption=🔨 *New Android Build*\nCommit: \`${SHORT_SHA}\`\nBranch: \`${{ github.ref_name }}\`" \
+            -F "parse_mode=Markdown"
