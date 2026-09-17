@@ -98,6 +98,7 @@ export default async function WatchPage({ params }: PageProps) {
           isLocked={isLocked}
           seriesId={series.id}
           freeEpisodes={freeAllowance}
+          totalEpisodes={mergedSeries?.episodeList?.length || series.episodes}
         />
       </div>
 

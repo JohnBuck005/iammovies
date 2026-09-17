@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Hls from "hls.js";
 import { useUser } from "@/components/UserProvider";
 
 // MediaSession plugin — only available inside the native Capacitor shell.
-// The dynamic import fails gracefully on the plain web, so the player works
-// unchanged in a browser.
 let MediaSession: typeof import("@capgo/capacitor-media-session").MediaSession | null = null;
 (async () => {
   try {
@@ -26,6 +25,7 @@ interface VideoPlayerProps {
   isLocked: boolean;
   seriesId: string;
   freeEpisodes?: number;
+  totalEpisodes?: number;
 }
 
 type QualityLevel = {
@@ -35,6 +35,31 @@ type QualityLevel = {
   label: string;
 };
 
+// --- Continue Watching helpers ---
+const CW_KEY = "iam_continue_watching";
+type CWEntry = { seriesId: string; episode: number; progress: number; ts: number };
+
+function saveCW(entry: CWEntry) {
+  try {
+    const raw = localStorage.getItem(CW_KEY);
+    const list: CWEntry[] = raw ? JSON.parse(raw) : [];
+    const idx = list.findIndex((e) => e.seriesId === entry.seriesId);
+    if (idx >= 0) list[idx] = entry;
+    else list.push(entry);
+    list.sort((a, b) => b.ts - a.ts);
+    localStorage.setItem(CW_KEY, JSON.stringify(list.slice(0, 20)));
+  } catch {}
+}
+
+export function getContinueWatching(): CWEntry[] {
+  try {
+    const raw = localStorage.getItem(CW_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
 export default function VideoPlayer({
   videoUrl,
   poster,
@@ -43,16 +68,15 @@ export default function VideoPlayer({
   isLocked,
   seriesId,
   freeEpisodes = 5,
+  totalEpisodes,
 }: VideoPlayerProps) {
-  // Paywall copy follows the series' own allowance — a hardcoded "1–5" is wrong
-  // for any series with a different free-episode count.
+  const router = useRouter();
   const freeLine =
     freeEpisodes <= 0
       ? "Subscribe to watch every episode"
       : freeEpisodes === 1
         ? "Episode 1 is free to watch"
         : `Episodes 1–${freeEpisodes} are free to watch`;
-  const [showPaywall, setShowPaywall] = useState(false);
   const [hlsUrl, setHlsUrl] = useState<string | null>(null);
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [levels, setLevels] = useState<QualityLevel[]>([]);
@@ -63,9 +87,36 @@ export default function VideoPlayer({
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const touchRef = useRef<{ dist: number; mid: { x: number; y: number }; zoom: number; pan: { x: number; y: number } } | null>(null);
-  const lastTapRef = useRef(0);
 
-  // Fetch the signed manifest URL from our server route
+  // --- Gesture state ---
+  const [seekFlash, setSeekFlash] = useState<"rewind" | "forward" | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number; time: number; side: "left" | "right" } | null>(null);
+  const lastTapRef = useRef(0);
+  const tapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isGestureRef = useRef(false);
+  const [brightness, setBrightness] = useState(1);
+  const [volume, setVolume] = useState(1);
+  const [gestureIndicator, setGestureIndicator] = useState<{ type: "brightness" | "volume"; value: number } | null>(null);
+  const gestureHideRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // --- Immersive mode on mount ---
+  useEffect(() => {
+    let StatusBar: any = null;
+    (async () => {
+      try {
+        const mod = await import("@capacitor/status-bar");
+        StatusBar = mod.StatusBar;
+        await StatusBar.hide();
+      } catch {}
+    })();
+    return () => {
+      try { StatusBar?.show(); } catch {}
+    };
+  }, []);
+
+  // Fetch the signed manifest URL
   useEffect(() => {
     if (!videoUrl) return;
     let cancelled = false;
@@ -93,7 +144,7 @@ export default function VideoPlayer({
     };
   }, [videoUrl]);
 
-  // Attach HLS via hls.js (or native for Safari)
+  // Attach HLS
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !hlsUrl) return;
@@ -107,7 +158,7 @@ export default function VideoPlayer({
       const hls = new Hls({
         maxBufferLength: 30,
         capLevelToPlayerSize: false,
-        startLevel: -1, // auto-detect best quality initially
+        startLevel: -1,
       });
       hlsRef.current = hls;
       hls.loadSource(hlsUrl);
@@ -120,10 +171,7 @@ export default function VideoPlayer({
           width: level.width,
           label: `${level.height}p`,
         }));
-        console.log("Parsed levels:", parsed);
         setLevels(parsed);
-
-        // Start at actual highest quality (levels aren't always sorted)
         const highest = parsed.reduce((best, l) => l.height > best.height ? l : best, parsed[0]);
         hls.startLevel = highest.index;
         hls.nextLevel = highest.index;
@@ -143,6 +191,20 @@ export default function VideoPlayer({
     video.src = hlsUrl;
   }, [hlsUrl]);
 
+  // Save watch progress periodically
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !videoUrl) return;
+    const onTimeUpdate = () => {
+      if (video.duration > 0) {
+        const progress = Math.round((video.currentTime / video.duration) * 100);
+        saveCW({ seriesId, episode: episodeNum, progress, ts: Date.now() });
+      }
+    };
+    video.addEventListener("timeupdate", onTimeUpdate);
+    return () => video.removeEventListener("timeupdate", onTimeUpdate);
+  }, [videoUrl, seriesId, episodeNum]);
+
   const handleQualityChange = (index: number) => {
     const hls = hlsRef.current;
     if (!hls) return;
@@ -152,13 +214,12 @@ export default function VideoPlayer({
 
   const autoLevel = levels.length > 0 ? levels.reduce((best, l) => l.height > best.height ? l : best, levels[0]) : null;
 
-  // --- MediaSession: lock-screen controls + background audio metadata ---
+  // --- MediaSession ---
   const setupMediaSession = useCallback(() => {
     if (!MediaSession) return;
     const video = videoRef.current;
     if (!video) return;
 
-    // Metadata shown on lock screen / notification / Control Center
     MediaSession.setMetadata({
       title: `${title} — Episode ${episodeNum}`,
       artist: "IAmoviestory",
@@ -166,7 +227,6 @@ export default function VideoPlayer({
       artwork: poster ? [{ src: poster }] : [],
     }).catch(() => {});
 
-    // Sync playback state to native controls
     const syncState = () => {
       MediaSession?.setPlaybackState({
         playbackState: video.paused ? "paused" : "playing",
@@ -177,13 +237,8 @@ export default function VideoPlayer({
     video.addEventListener("pause", syncState);
     video.addEventListener("ended", syncState);
 
-    // Handle actions from lock screen / notification controls
-    MediaSession.setActionHandler({ action: "play" }, () => {
-      video.play();
-    }).catch(() => {});
-    MediaSession.setActionHandler({ action: "pause" }, () => {
-      video.pause();
-    }).catch(() => {});
+    MediaSession.setActionHandler({ action: "play" }, () => video.play()).catch(() => {});
+    MediaSession.setActionHandler({ action: "pause" }, () => video.pause()).catch(() => {});
     MediaSession.setActionHandler({ action: "seekbackward" }, () => {
       video.currentTime = Math.max(0, video.currentTime - 10);
     }).catch(() => {});
@@ -195,21 +250,186 @@ export default function VideoPlayer({
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !hlsUrl) return;
-    // Wait for metadata to load so we have duration for position state
     const onLoaded = () => setupMediaSession();
     video.addEventListener("loadedmetadata", onLoaded);
     return () => video.removeEventListener("loadedmetadata", onLoaded);
   }, [hlsUrl, setupMediaSession]);
 
-  // Locked premium episode → show paywall gate
+  // --- Auto-play next ---
+  const hasNext = totalEpisodes ? episodeNum < totalEpisodes : true;
+
+  const cancelCountdown = useCallback(() => {
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current);
+      countdownRef.current = null;
+    }
+    setCountdown(null);
+  }, []);
+
+  const handleEnded = useCallback(() => {
+    recordWatched(seriesId, episodeNum, 100);
+    addPoints(10);
+    if (!hasNext) return;
+    let remaining = 5;
+    setCountdown(remaining);
+    countdownRef.current = setInterval(() => {
+      remaining -= 1;
+      if (remaining <= 0) {
+        clearInterval(countdownRef.current!);
+        countdownRef.current = null;
+        router.push(`/series/${seriesId}/watch/${episodeNum + 1}`);
+      } else {
+        setCountdown(remaining);
+      }
+    }, 1000);
+  }, [seriesId, episodeNum, hasNext, router, recordWatched, addPoints]);
+
+  useEffect(() => {
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, []);
+
+  // --- Gesture handlers ---
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      touchRef.current = {
+        dist: Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY),
+        mid: { x: (e.touches[0].clientX + e.touches[1].clientX) / 2, y: (e.touches[0].clientY + e.touches[1].clientY) / 2 },
+        zoom,
+        pan,
+      };
+      isGestureRef.current = true;
+    } else if (e.touches.length === 1) {
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const side = e.touches[0].clientX - rect.left < rect.width / 2 ? "left" : "right";
+      touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, time: Date.now(), side };
+      isGestureRef.current = false;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    // Two-finger pinch → zoom
+    if (e.touches.length === 2 && touchRef.current) {
+      e.preventDefault();
+      const newDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      const newMid = { x: (e.touches[0].clientX + e.touches[1].clientX) / 2, y: (e.touches[0].clientY + e.touches[1].clientY) / 2 };
+      const scale = Math.max(1, Math.min(5, touchRef.current.zoom * (newDist / touchRef.current.dist)));
+      setZoom(scale);
+      setPan({
+        x: touchRef.current.pan.x + (newMid.x - touchRef.current.mid.x),
+        y: touchRef.current.pan.y + (newMid.y - touchRef.current.mid.y),
+      });
+      isGestureRef.current = true;
+      return;
+    }
+
+    // One-finger vertical swipe → brightness (left) / volume (right)
+    if (e.touches.length === 1 && touchStartRef.current) {
+      const dx = e.touches[0].clientX - touchStartRef.current.x;
+      const dy = e.touches[0].clientY - touchStartRef.current.y;
+      const adx = Math.abs(dx);
+      const ady = Math.abs(dy);
+
+      if (ady > 20 && ady > adx * 1.5) {
+        isGestureRef.current = true;
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        const delta = -dy / (rect.height * 0.6);
+
+        if (touchStartRef.current.side === "left") {
+          const newB = Math.max(0, Math.min(1, brightness + delta));
+          setBrightness(newB);
+          setGestureIndicator({ type: "brightness", value: newB });
+          video.style.filter = `brightness(${newB})`;
+        } else {
+          const newV = Math.max(0, Math.min(1, volume + delta));
+          setVolume(newV);
+          video.volume = newV;
+          setGestureIndicator({ type: "volume", value: newV });
+        }
+
+        if (gestureHideRef.current) clearTimeout(gestureHideRef.current);
+        gestureHideRef.current = setTimeout(() => setGestureIndicator(null), 800);
+      }
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const video = videoRef.current;
+
+    // Two-finger: snap zoom
+    if (touchRef.current) {
+      touchRef.current = null;
+      const snapPoints = [1, 1.5, 2, 3, 5];
+      const nearest = snapPoints.reduce((prev, curr) => Math.abs(curr - zoom) < Math.abs(prev - zoom) ? curr : prev);
+      setZoom(nearest);
+      if (nearest === 1) setPan({ x: 0, y: 0 });
+      return;
+    }
+
+    if (touchStartRef.current && e.changedTouches.length === 1) {
+      const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
+      const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
+      const adx = Math.abs(dx);
+      const ady = Math.abs(dy);
+      const elapsed = Date.now() - touchStartRef.current.time;
+
+      // Horizontal swipe → episode change (only when not zoomed)
+      if (adx > 60 && adx > ady * 1.5 && zoom === 1 && !isGestureRef.current) {
+        if (dx < 0 && hasNext) {
+          router.push(`/series/${seriesId}/watch/${episodeNum + 1}`);
+        } else if (dx > 0 && episodeNum > 1) {
+          router.push(`/series/${seriesId}/watch/${episodeNum - 1}`);
+        }
+        touchStartRef.current = null;
+        return;
+      }
+
+      // Tap detection
+      if (elapsed < 300 && adx < 20 && ady < 20 && !isGestureRef.current) {
+        const now = Date.now();
+        const side = touchStartRef.current.side;
+
+        // Double-tap → seek
+        if (now - lastTapRef.current < 300) {
+          if (tapTimeoutRef.current) {
+            clearTimeout(tapTimeoutRef.current);
+            tapTimeoutRef.current = null;
+          }
+          if (video) {
+            if (side === "left") {
+              video.currentTime = Math.max(0, video.currentTime - 10);
+              setSeekFlash("rewind");
+            } else {
+              video.currentTime = Math.min(video.duration, video.currentTime + 10);
+              setSeekFlash("forward");
+            }
+            setTimeout(() => setSeekFlash(null), 500);
+          }
+          lastTapRef.current = 0;
+        } else {
+          // Single tap → play/pause (delayed to distinguish from double-tap)
+          lastTapRef.current = now;
+          tapTimeoutRef.current = setTimeout(() => {
+            if (video) video.paused ? video.play() : video.pause();
+          }, 300);
+        }
+      }
+    }
+
+    touchStartRef.current = null;
+    isGestureRef.current = false;
+  };
+
+  // Locked premium episode
   if (isLocked) {
     return (
       <div className="relative w-full bg-[#111]" style={{ height: "100dvh", maxHeight: "100dvh" }}>
-        <img
-          src={poster}
-          alt={title}
-          className="w-full h-full object-cover opacity-20"
-        />
+        <img src={poster} alt={title} className="w-full h-full object-cover opacity-20" />
         <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
           <div className="w-16 h-16 rounded-full bg-[#D4AF37]/20 flex items-center justify-center mb-4">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-[#D4AF37]" viewBox="0 0 20 20" fill="currentColor">
@@ -220,10 +440,7 @@ export default function VideoPlayer({
           <p className="text-[#aaa] text-sm mb-4 max-w-xs">
             Subscribe to unlock all {title} episodes, ad-free.
           </p>
-          <Link
-            href="/subscribe"
-            className="bg-[#D4AF37] text-black px-8 py-3 rounded-lg font-bold text-sm hover:bg-[#B8962E] transition"
-          >
+          <Link href="/subscribe" className="bg-[#D4AF37] text-black px-8 py-3 rounded-lg font-bold text-sm hover:bg-[#B8962E] transition">
             🔓 Subscribe to Unlock
           </Link>
           <p className="text-[#666] text-xs mt-3">{freeLine}</p>
@@ -232,71 +449,8 @@ export default function VideoPlayer({
     );
   }
 
-  // Free / unlocked episode → real video player
+  // Free / unlocked episode
   if (videoUrl) {
-    const qualityLabel =
-      currentLevel === -1
-        ? "Auto"
-        : levels[currentLevel]?.label ?? "Auto";
-
-    // Pinch-to-zoom touch handlers
-    const getTouchDist = (touches: TouchList) => {
-      const dx = touches[0].clientX - touches[1].clientX;
-      const dy = touches[0].clientY - touches[1].clientY;
-      return Math.sqrt(dx * dx + dy * dy);
-    };
-    const getTouchMid = (touches: TouchList) => ({
-      x: (touches[0].clientX + touches[1].clientX) / 2,
-      y: (touches[0].clientY + touches[1].clientY) / 2,
-    });
-
-    const handleTouchStart = (e: React.TouchEvent) => {
-      if (e.touches.length === 2) {
-        e.preventDefault();
-        touchRef.current = {
-          dist: getTouchDist(e.touches),
-          mid: getTouchMid(e.touches),
-          zoom,
-          pan,
-        };
-      } else if (e.touches.length === 1) {
-        // Double-tap to reset zoom
-        const now = Date.now();
-        if (now - lastTapRef.current < 300) {
-          setZoom(1);
-          setPan({ x: 0, y: 0 });
-        }
-        lastTapRef.current = now;
-      }
-    };
-
-    const handleTouchMove = (e: React.TouchEvent) => {
-      if (e.touches.length === 2 && touchRef.current) {
-        e.preventDefault();
-        const newDist = getTouchDist(e.touches);
-        const newMid = getTouchMid(e.touches);
-        const scale = Math.max(1, Math.min(5, touchRef.current.zoom * (newDist / touchRef.current.dist)));
-        const dx = newMid.x - touchRef.current.mid.x;
-        const dy = newMid.y - touchRef.current.mid.y;
-        setZoom(scale);
-        setPan({
-          x: touchRef.current.pan.x + dx,
-          y: touchRef.current.pan.y + dy,
-        });
-      }
-    };
-
-    const handleTouchEnd = () => {
-      touchRef.current = null;
-      // Snap to nearest zoom level like YouTube
-      const snapPoints = [1, 1.5, 2, 3, 5];
-      const nearest = snapPoints.reduce((prev, curr) =>
-        Math.abs(curr - zoom) < Math.abs(prev - zoom) ? curr : prev
-      );
-      setZoom(nearest);
-      if (nearest === 1) setPan({ x: 0, y: 0 });
-    };
-
     return (
       <div
         className="relative w-full bg-black overflow-hidden"
@@ -319,38 +473,86 @@ export default function VideoPlayer({
             touchAction: "none",
           }}
           playsInline
-          onEnded={() => {
-            recordWatched(seriesId, episodeNum, 100);
-            addPoints(10);
-          }}
+          onEnded={handleEnded}
         />
+
+        {/* Load error */}
         {loadErr && (
           <div className="absolute inset-0 flex items-center justify-center px-6 text-center">
             <p className="text-red-400 text-sm">Could not load video: {loadErr}</p>
           </div>
         )}
+
+        {/* Quality selector */}
         {levels.length > 0 && (
           <div className="absolute top-3 left-3 z-20">
             <select
               value={currentLevel}
               onChange={(e) => handleQualityChange(Number(e.target.value))}
               className="bg-black/70 text-white text-[13px] font-semibold rounded-lg border border-white/40 px-3 py-1.5 backdrop-blur-md appearance-none cursor-pointer"
-              style={{ textAlignLast: 'center' }}
+              style={{ textAlignLast: "center" }}
             >
               <option value={-1}>Auto{autoLevel ? ` (${autoLevel.label})` : ""}</option>
               {levels.slice().sort((a, b) => b.height - a.height).map((l) => (
-                <option key={l.index} value={l.index}>
-                  {l.label}
-                </option>
+                <option key={l.index} value={l.index}>{l.label}</option>
               ))}
             </select>
+          </div>
+        )}
+
+        {/* Double-tap seek flash */}
+        {seekFlash && (
+          <div className={`absolute inset-y-0 ${seekFlash === "rewind" ? "left-0 w-1/3" : "right-0 w-1/3"} flex items-center justify-center pointer-events-none z-30`}>
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-white text-3xl font-bold drop-shadow-lg">
+                {seekFlash === "rewind" ? "⏪" : "⏩"}
+              </span>
+              <span className="text-white text-sm font-semibold drop-shadow-lg">10s</span>
+            </div>
+          </div>
+        )}
+
+        {/* Brightness / Volume indicator */}
+        {gestureIndicator && (
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 pointer-events-none">
+            <div className="bg-black/70 rounded-xl px-4 py-3 flex flex-col items-center gap-2 backdrop-blur-md">
+              <span className="text-white text-xs">{gestureIndicator.type === "brightness" ? "☀️" : "🔊"}</span>
+              <div className="w-20 h-1.5 bg-white/30 rounded-full overflow-hidden">
+                <div className="h-full bg-white rounded-full transition-all" style={{ width: `${gestureIndicator.value * 100}%` }} />
+              </div>
+              <span className="text-white text-[11px] font-medium">{Math.round(gestureIndicator.value * 100)}%</span>
+            </div>
+          </div>
+        )}
+
+        {/* Auto-play next countdown */}
+        {countdown !== null && (
+          <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-30">
+            <p className="text-white text-lg font-bold mb-2">Next episode</p>
+            <div className="relative w-20 h-20 mb-4">
+              <svg className="w-full h-full -rotate-90" viewBox="0 0 80 80">
+                <circle cx="40" cy="40" r="36" fill="none" stroke="white" strokeWidth="3" opacity="0.2" />
+                <circle
+                  cx="40" cy="40" r="36" fill="none" stroke="#D4AF37" strokeWidth="3"
+                  strokeDasharray={`${2 * Math.PI * 36}`}
+                  strokeDashoffset={`${2 * Math.PI * 36 * (1 - countdown / 5)}`}
+                  strokeLinecap="round"
+                  className="transition-all duration-1000"
+                />
+              </svg>
+              <span className="absolute inset-0 flex items-center justify-center text-white text-2xl font-bold">{countdown}</span>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={cancelCountdown} className="bg-white/20 text-white px-6 py-2 rounded-lg text-sm font-medium">Cancel</button>
+              <button onClick={() => { cancelCountdown(); router.push(`/series/${seriesId}/watch/${episodeNum + 1}`); }} className="bg-[#D4AF37] text-black px-6 py-2 rounded-lg text-sm font-bold">Play Now</button>
+            </div>
           </div>
         )}
       </div>
     );
   }
 
-  // No video available fallback
+  // No video fallback
   return (
     <div className="relative w-full bg-[#111]" style={{ height: "100dvh", maxHeight: "100dvh" }}>
       <img src={poster} alt={title} className="w-full h-full object-cover opacity-30" />
