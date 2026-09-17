@@ -1,12 +1,14 @@
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import Link from "next/link";
-import VideoPlayer from "@/components/VideoPlayer";
+import VideoPlayerClient from "@/components/VideoPlayerClient";
 import { getSeriesById, getEpisode, seriesData } from "@/data/series";
 import { getMergedSeriesById } from "@/lib/episodes";
 import { getServerUserEmail, getSubscriptionStatus } from "@/lib/supabaseServer";
 import { getEpisodeGuid, PULLZONE } from "@/lib/bunny";
 import type { Metadata } from "next";
+
+export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ id: string; episode: string }>;
@@ -90,7 +92,7 @@ export default async function WatchPage({ params }: PageProps) {
     <div className="min-h-screen bg-black">
       {/* Player — full-width 9:16 portrait */}
       <div className="w-full">
-        <VideoPlayer
+        <VideoPlayerClient
           videoUrl={ep.videoUrl || undefined}
           poster={ep.thumbnail || getBunnyThumbnailUrl(ep.number, series.id) || series.poster || series.thumbnail}
           title={`${series.title} — Ep ${ep.number}`}

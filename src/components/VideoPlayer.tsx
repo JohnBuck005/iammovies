@@ -3,19 +3,24 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Hls from "hls.js";
 import { useUser } from "@/components/UserProvider";
 
+// hls.js — dynamically imported on client only; eagerly importing it at module
+// scope causes a TDZ in Next.js 16 Turbopack SSR ("Cannot access '$' before
+// initialization"). Same reason for @capgo/capacitor-media-session below.
+type HlsType = typeof import("hls.js").default;
+
 // MediaSession plugin — only available inside the native Capacitor shell.
-let MediaSession: typeof import("@capgo/capacitor-media-session").MediaSession | null = null;
-(async () => {
+// Use getMediaSession() inside useEffect — never at module scope (SSR TDZ).
+async function getMediaSession(): Promise<typeof import("@capgo/capacitor-media-session").MediaSession | null> {
   try {
+    if (typeof window === "undefined") return null;
     const mod = await import("@capgo/capacitor-media-session");
-    MediaSession = mod.MediaSession;
+    return mod.MediaSession ?? null;
   } catch {
-    // Not running inside Capacitor — no-op.
+    return null;
   }
-})();
+}
 
 interface VideoPlayerProps {
   videoUrl: string | null;
@@ -149,70 +154,86 @@ export default function VideoPlayer({
     };
   }, [videoUrl]);
 
-  // Attach HLS
+  // Attach HLS — hls.js is dynamically imported to avoid SSR TDZ issues
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !hlsUrl) return;
 
-    if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.src = hlsUrl;
-      return;
-    }
+    let cancelled = false;
+    let cleanupHls: (() => void) | null = null;
 
-    if (Hls.isSupported()) {
-      const hls = new Hls({
-        maxBufferLength: 30,
-        capLevelToPlayerSize: false,
-        startLevel: -1,
-      });
-      hlsRef.current = hls;
-      hls.loadSource(hlsUrl);
-      hls.attachMedia(video);
+    (async () => {
+      if (cancelled) return;
 
-      hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
-        const parsed: QualityLevel[] = data.levels.map((level, index) => ({
-          index,
-          height: level.height,
-          width: level.width,
-          label: `${level.height}p`,
-        }));
-        setLevels(parsed);
-        const highest = parsed.reduce((best, l) => l.height > best.height ? l : best, parsed[0]);
-        hls.startLevel = highest.index;
-        hls.nextLevel = highest.index;
-        setCurrentLevel(highest.index);
-      });
+      if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        video.src = hlsUrl;
+        return;
+      }
 
-      hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
-        if (data.level >= 0) setCurrentLevel(data.level);
-      });
+      const { default: Hls } = await import("hls.js");
+      if (cancelled) return;
 
-      hls.on(Hls.Events.ERROR, (_, data) => {
-        console.error("[VideoPlayer] HLS error:", data);
-        if (data.fatal) {
-          switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              setLoadErr("Network error while loading video");
-              break;
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              hls.recoverMediaError();
-              break;
-            default:
-              setLoadErr("Video playback error — try refreshing");
-              break;
+      if (Hls.isSupported()) {
+        const hls = new Hls({
+          maxBufferLength: 30,
+          capLevelToPlayerSize: false,
+          startLevel: -1,
+        });
+        hlsRef.current = hls;
+        hls.loadSource(hlsUrl);
+        hls.attachMedia(video);
+
+        hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
+          const parsed: QualityLevel[] = data.levels.map((level, index) => ({
+            index,
+            height: level.height,
+            width: level.width,
+            label: `${level.height}p`,
+          }));
+          setLevels(parsed);
+          const highest = parsed.reduce((best, l) => l.height > best.height ? l : best, parsed[0]);
+          hls.startLevel = highest.index;
+          hls.nextLevel = highest.index;
+          setCurrentLevel(highest.index);
+        });
+
+        hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
+          if (data.level >= 0) setCurrentLevel(data.level);
+        });
+
+        hls.on(Hls.Events.ERROR, (_, data) => {
+          console.error("[VideoPlayer] HLS error:", data);
+          if (data.fatal) {
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                setLoadErr("Network error while loading video");
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                hls.recoverMediaError();
+                break;
+              default:
+                setLoadErr("Video playback error — try refreshing");
+                break;
+            }
           }
-        }
-      });
+        });
 
-      hls.startLevel = -1;
+        hls.startLevel = -1;
 
-      return () => {
-        hls.destroy();
-        hlsRef.current = null;
-      };
-    }
+        cleanupHls = () => {
+          hls.destroy();
+          hlsRef.current = null;
+        };
+        return;
+      }
 
-    video.src = hlsUrl;
+      video.src = hlsUrl;
+    })();
+
+    return () => {
+      cancelled = true;
+      if (cleanupHls) cleanupHls();
+    };
   }, [hlsUrl]);
 
   // Save watch progress periodically
@@ -317,12 +338,13 @@ export default function VideoPlayer({
   }, []);
 
   // --- MediaSession ---
-  const setupMediaSession = useCallback(() => {
-    if (!MediaSession) return;
+  const setupMediaSession = useCallback(async () => {
+    const MS = await getMediaSession();
+    if (!MS) return;
     const video = videoRef.current;
     if (!video) return;
 
-    MediaSession.setMetadata({
+    MS.setMetadata({
       title: `${title} — Episode ${episodeNum}`,
       artist: "IAmoviestory",
       album: title,
@@ -330,7 +352,7 @@ export default function VideoPlayer({
     }).catch(() => {});
 
     const syncState = () => {
-      MediaSession?.setPlaybackState({
+      MS.setPlaybackState({
         playbackState: video.paused ? "paused" : "playing",
       }).catch(() => {});
     };
@@ -339,12 +361,12 @@ export default function VideoPlayer({
     video.addEventListener("pause", syncState);
     video.addEventListener("ended", syncState);
 
-    MediaSession.setActionHandler({ action: "play" }, () => video.play()).catch(() => {});
-    MediaSession.setActionHandler({ action: "pause" }, () => video.pause()).catch(() => {});
-    MediaSession.setActionHandler({ action: "seekbackward" }, () => {
+    MS.setActionHandler({ action: "play" }, () => video.play()).catch(() => {});
+    MS.setActionHandler({ action: "pause" }, () => video.pause()).catch(() => {});
+    MS.setActionHandler({ action: "seekbackward" }, () => {
       video.currentTime = Math.max(0, video.currentTime - 10);
     }).catch(() => {});
-    MediaSession.setActionHandler({ action: "seekforward" }, () => {
+    MS.setActionHandler({ action: "seekforward" }, () => {
       video.currentTime = Math.min(video.duration, video.currentTime + 10);
     }).catch(() => {});
   }, [title, episodeNum, poster]);
