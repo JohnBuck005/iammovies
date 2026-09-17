@@ -50,14 +50,43 @@ jobs:
       - name: Write SDK path
         run: echo "sdk.dir=$ANDROID_HOME" > android/local.properties
 
+      - name: Decode release keystore
+        if: env.KEYSTORE_BASE64 != ''
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/upload-keystore.jks
+          cat > android/key.properties << EOF
+          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.KEYSTORE_PASSWORD }}
+          keyAlias=upload
+          storeFile=upload-keystore.jks
+          EOF
+
       - name: Build debug APK
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
+
+      - name: Build release AAB
+        if: env.KEYSTORE_BASE64 != ''
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        working-directory: android
+        run: ./gradlew bundleRelease --no-daemon
 
       - uses: actions/upload-artifact@v4
         with:
           name: iamovies-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        if: env.KEYSTORE_BASE64 != ''
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        with:
+          name: iamovies-release-aab
+          path: android/app/build/outputs/bundle/release/*.aab
           retention-days: 30
 
       - name: Send APK to Telegram
@@ -70,3 +99,18 @@ jobs:
             -F "document=@${APK}" \
             -F "caption=🔨 *New Android Build*\nCommit: \`${SHORT_SHA}\`\nBranch: \`${{ github.ref_name }}\`" \
             -F "parse_mode=Markdown"
+
+      - name: Send release AAB to Telegram
+        if: success() && env.KEYSTORE_BASE64 != ''
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          AAB=$(find android/app/build/outputs/bundle/release -name "*.aab" | head -1)
+          if [ -n "$AAB" ]; then
+            SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+            curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument" \
+              -F "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+              -F "document=@${AAB}" \
+              -F "caption=📦 *Release AAB*\nCommit: \`${SHORT_SHA}\`\nReady for Google Play upload" \
+              -F "parse_mode=Markdown"
+          fi
