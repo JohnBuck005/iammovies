@@ -119,11 +119,11 @@ export default function VideoPlayer({
         console.log("Parsed levels:", parsed);
         setLevels(parsed);
 
-        // Start at highest quality available
-        const highestIndex = parsed.length - 1;
-        hls.startLevel = highestIndex;
-        hls.nextLevel = highestIndex;
-        setCurrentLevel(highestIndex);
+        // Start at actual highest quality (levels aren't always sorted)
+        const highest = parsed.reduce((best, l) => l.height > best.height ? l : best, parsed[0]);
+        hls.startLevel = highest.index;
+        hls.nextLevel = highest.index;
+        setCurrentLevel(highest.index);
       });
 
       hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
@@ -146,7 +146,7 @@ export default function VideoPlayer({
     setCurrentLevel(index);
   };
 
-  const autoLevel = levels.find((l) => l.height >= 720);
+  const autoLevel = levels.length > 0 ? levels.reduce((best, l) => l.height > best.height ? l : best, levels[0]) : null;
 
   // --- MediaSession: lock-screen controls + background audio metadata ---
   const setupMediaSession = useCallback(() => {
@@ -265,7 +265,7 @@ export default function VideoPlayer({
               style={{ textAlignLast: 'center' }}
             >
               <option value={-1}>Auto{autoLevel ? ` (${autoLevel.label})` : ""}</option>
-              {levels.slice().reverse().map((l) => (
+              {levels.slice().sort((a, b) => b.height - a.height).map((l) => (
                 <option key={l.index} value={l.index}>
                   {l.label}
                 </option>
