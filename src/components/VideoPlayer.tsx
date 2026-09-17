@@ -197,7 +197,7 @@ export default function VideoPlayer({
   // Locked premium episode → show paywall gate
   if (isLocked) {
     return (
-      <div className="relative w-full bg-[#111]" style={{ aspectRatio: "9 / 16" }}>
+      <div className="relative w-full bg-[#111]" style={{ height: "100dvh", maxHeight: "100dvh" }}>
         <img
           src={poster}
           alt={title}
@@ -233,7 +233,7 @@ export default function VideoPlayer({
         : levels[currentLevel]?.label ?? "Auto";
 
     return (
-      <div className="relative w-full bg-black" style={{ aspectRatio: "9 / 16" }}>
+      <div className="relative w-full bg-black" style={{ height: "100dvh", maxHeight: "100dvh" }}>
         <video
           key={hlsUrl ?? ""}
           ref={videoRef}
@@ -276,7 +276,7 @@ export default function VideoPlayer({
 
   // No video available fallback
   return (
-    <div className="relative w-full bg-[#111]" style={{ aspectRatio: "9 / 16" }}>
+    <div className="relative w-full bg-[#111]" style={{ height: "100dvh", maxHeight: "100dvh" }}>
       <img src={poster} alt={title} className="w-full h-full object-cover opacity-30" />
       <div className="absolute inset-0 flex items-center justify-center">
         <p className="text-[#888] text-sm">Video coming soon</p>
