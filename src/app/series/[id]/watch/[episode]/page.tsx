@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { id, episode } = await params;
   const epNum = Number(episode);
   const series = getSeriesById(id);
-  const merged = await getMergedSeriesById(id);
+  const merged = await getMergedSeriesById(id).catch(() => null as Awaited<ReturnType<typeof getMergedSeriesById>>);
   const ep = merged?.episodeList?.find((candidate) => candidate.number === epNum) ?? getEpisode(id, epNum);
   if (!series || !ep) return { title: "Not Found" };
   return {
@@ -70,14 +70,14 @@ export default async function WatchPage({ params }: PageProps) {
   // Resolve through the MERGED episode list, never the static one alone: episodes
   // uploaded via the admin panel live only in the DB, so a static-only lookup 404s
   // exactly the episodes the series page is already linking to.
-  const mergedSeries = await getMergedSeriesById(id);
+  const mergedSeries = await getMergedSeriesById(id).catch(() => null as Awaited<ReturnType<typeof getMergedSeriesById>>);
   const ep =
     mergedSeries?.episodeList?.find((candidate) => candidate.number === epNum) ?? getEpisode(id, epNum);
 
   if (!series || !ep) return notFound();
 
-  const email = await getServerUserEmail();
-  const subStatus = email ? await getSubscriptionStatus({ email }) : "none";
+  const email = await getServerUserEmail().catch(() => null as string | null);
+  const subStatus = email ? await getSubscriptionStatus({ email }).catch(() => "none" as const) : "none";
   const hasActiveSubscription = subStatus === "active" || subStatus === "trialing";
   const cookieStore = await cookies();
   const isAdmin = cookieStore.get("iam_admin")?.value === "1";
