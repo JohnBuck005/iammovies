@@ -71,6 +71,7 @@ export default function VideoPlayer({
   totalEpisodes,
 }: VideoPlayerProps) {
   const router = useRouter();
+  console.log("[VideoPlayer] Mounted:", { videoUrl: videoUrl ?? null, seriesId, episodeNum });
   const freeLine =
     freeEpisodes <= 0
       ? "Subscribe to watch every episode"
@@ -129,16 +130,19 @@ export default function VideoPlayer({
       hlsRef.current.destroy();
       hlsRef.current = null;
     }
+    console.log("[VideoPlayer] Fetching video URL:", videoUrl);
     fetch(videoUrl)
       .then((r) => {
         if (!r.ok) throw new Error(`video endpoint ${r.status}`);
         return r.json();
       })
       .then((d) => {
+        console.log("[VideoPlayer] Got HLS URL:", d.url ?? null);
         if (!cancelled) setHlsUrl(d.url ?? null);
       })
       .catch((e) => {
-        if (!cancelled) setLoadErr(String(e.message || e));
+        console.error("[VideoPlayer] Error loading video:", e);
+        if (!cancelled) setLoadErr(`${e.message || e} (${videoUrl})`);
       });
     return () => {
       cancelled = true;
