@@ -100,6 +100,7 @@ export default function VideoPlayer({
   const [volume, setVolume] = useState(1);
   const [gestureIndicator, setGestureIndicator] = useState<{ type: "brightness" | "volume"; value: number } | null>(null);
   const gestureHideRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isPiP, setIsPiP] = useState(false);
 
   // --- Immersive mode on mount ---
   useEffect(() => {
@@ -210,9 +211,87 @@ export default function VideoPlayer({
     if (!hls) return;
     hls.currentLevel = index;
     setCurrentLevel(index);
+    triggerHaptic("light");
   };
 
   const autoLevel = levels.length > 0 ? levels.reduce((best, l) => l.height > best.height ? l : best, levels[0]) : null;
+
+  // --- Haptic feedback ---
+  const triggerHaptic = useCallback((type: "light" | "medium" | "heavy" = "light") => {
+    try {
+      if (navigator.vibrate) {
+        const patterns: Record<string, number | number[]> = {
+          light: 15,
+          medium: [15, 15, 15],
+          heavy: [30, 10, 30],
+        };
+        navigator.vibrate(patterns[type]);
+      }
+      // Capacitor native haptic
+      (async () => {
+        try {
+          const mod = await import("@capacitor/haptics");
+          if (type === "light") mod.Haptics.lightImpact();
+          else if (type === "medium") mod.Haptics.mediumImpact();
+          else mod.Haptics.heavyImpact();
+        } catch {}
+      })();
+    } catch {}
+  }, []);
+
+  // --- Auto-resume ---
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !videoUrl) return;
+
+    const onLoaded = () => {
+      if (video.duration > 0) {
+        // Check saved progress for this episode
+        try {
+          const raw = localStorage.getItem(CW_KEY);
+          if (raw) {
+            const list: CWEntry[] = JSON.parse(raw);
+            const entry = list.find(
+              (e) => e.seriesId === seriesId && e.episode === episodeNum
+            );
+            if (entry && entry.progress > 10) {
+              const seekTime = (entry.progress / 100) * video.duration;
+              video.currentTime = Math.min(seekTime, video.duration - 5);
+            }
+          }
+        } catch {}
+      }
+      setupMediaSession();
+    };
+
+    video.addEventListener("loadedmetadata", onLoaded);
+    return () => video.removeEventListener("loadedmetadata", onLoaded);
+  }, [videoUrl, seriesId, episodeNum, setupMediaSession]);
+
+  // --- Picture-in-Picture ---
+  const togglePiP = useCallback(async () => {
+    const video = videoRef.current;
+    if (!video) return;
+    try {
+      const pipMod = await import("@capacitor/pip");
+      if (pipMod.Pip.isSupported()) {
+        if (isPiP) { await pipMod.Pip.exit(); video.play(); setIsPiP(false); }
+        else { video.pause(); await pipMod.Pip.enter({ videoElement: videoRef.current! }); setIsPiP(true); }
+        return;
+      }
+    } catch {}
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture(); video.play(); setIsPiP(false);
+      } else { video.pause(); await video.requestPictureInPicture(); setIsPiP(true); }
+    } catch {}
+  }, [isPiP]);
+
+  useEffect(() => {
+    const onPiPLeave = () => { setIsPiP(false); videoRef.current?.play(); };
+    document.addEventListener("leavepictureinpicture", onPiPLeave);
+    return () => document.removeEventListener("leavepictureinpicture", onPiPLeave);
+  }, []);
 
   // --- MediaSession ---
   const setupMediaSession = useCallback(() => {
@@ -380,6 +459,7 @@ export default function VideoPlayer({
 
       // Horizontal swipe → episode change (only when not zoomed)
       if (adx > 60 && adx > ady * 1.5 && zoom === 1 && !isGestureRef.current) {
+        triggerHaptic("medium");
         if (dx < 0 && hasNext) {
           router.push(`/series/${seriesId}/watch/${episodeNum + 1}`);
         } else if (dx > 0 && episodeNum > 1) {
@@ -408,6 +488,7 @@ export default function VideoPlayer({
               video.currentTime = Math.min(video.duration, video.currentTime + 10);
               setSeekFlash("forward");
             }
+            triggerHaptic("light");
             setTimeout(() => setSeekFlash(null), 500);
           }
           lastTapRef.current = 0;
@@ -483,7 +564,24 @@ export default function VideoPlayer({
           </div>
         )}
 
-        {/* Quality selector */}
+        {/* PiP toggle — top-right */}
+        <button
+          onClick={() => togglePiP()}
+          className="absolute top-3 right-3 z-20 bg-black/70 text-white w-10 h-10 rounded-lg flex items-center justify-center backdrop-blur-md hover:bg-black/90 transition"
+          title="Picture in Picture"
+        >
+          {isPiP ? (
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 0v12h8V4H6z" clipRule="evenodd" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+            </svg>
+          )}
+        </button>
+
+        {/* Quality selector — top-left */}
         {levels.length > 0 && (
           <div className="absolute top-3 left-3 z-20">
             <select
