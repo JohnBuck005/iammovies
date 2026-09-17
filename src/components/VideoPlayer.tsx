@@ -1,9 +1,22 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import Hls from "hls.js";
 import { useUser } from "@/components/UserProvider";
+
+// MediaSession plugin — only available inside the native Capacitor shell.
+// The dynamic import fails gracefully on the plain web, so the player works
+// unchanged in a browser.
+let MediaSession: typeof import("@capgo/capacitor-media-session").MediaSession | null = null;
+(async () => {
+  try {
+    const mod = await import("@capgo/capacitor-media-session");
+    MediaSession = mod.MediaSession;
+  } catch {
+    // Not running inside Capacitor — no-op.
+  }
+})();
 
 interface VideoPlayerProps {
   videoUrl: string | null;
@@ -132,6 +145,55 @@ export default function VideoPlayer({
 
   const autoLevel = levels.find((l) => l.height >= 720);
 
+  // --- MediaSession: lock-screen controls + background audio metadata ---
+  const setupMediaSession = useCallback(() => {
+    if (!MediaSession) return;
+    const video = videoRef.current;
+    if (!video) return;
+
+    // Metadata shown on lock screen / notification / Control Center
+    MediaSession.setMetadata({
+      title: `${title} — Episode ${episodeNum}`,
+      artist: "IAmoviestory",
+      album: title,
+      artwork: poster ? [{ src: poster }] : [],
+    }).catch(() => {});
+
+    // Sync playback state to native controls
+    const syncState = () => {
+      MediaSession?.setPlaybackState({
+        playbackState: video.paused ? "paused" : "playing",
+      }).catch(() => {});
+    };
+
+    video.addEventListener("play", syncState);
+    video.addEventListener("pause", syncState);
+    video.addEventListener("ended", syncState);
+
+    // Handle actions from lock screen / notification controls
+    MediaSession.setActionHandler({ action: "play" }, () => {
+      video.play();
+    }).catch(() => {});
+    MediaSession.setActionHandler({ action: "pause" }, () => {
+      video.pause();
+    }).catch(() => {});
+    MediaSession.setActionHandler({ action: "seekbackward" }, () => {
+      video.currentTime = Math.max(0, video.currentTime - 10);
+    }).catch(() => {});
+    MediaSession.setActionHandler({ action: "seekforward" }, () => {
+      video.currentTime = Math.min(video.duration, video.currentTime + 10);
+    }).catch(() => {});
+  }, [title, episodeNum, poster]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !hlsUrl) return;
+    // Wait for metadata to load so we have duration for position state
+    const onLoaded = () => setupMediaSession();
+    video.addEventListener("loadedmetadata", onLoaded);
+    return () => video.removeEventListener("loadedmetadata", onLoaded);
+  }, [hlsUrl, setupMediaSession]);
+
   // Locked premium episode → show paywall gate
   if (isLocked) {
     return (
@@ -177,7 +239,6 @@ export default function VideoPlayer({
           ref={videoRef}
           controls
           controlsList="nodownload"
-          disablePictureInPicture
           autoPlay
           poster={poster}
           className="w-full h-full object-contain bg-black"

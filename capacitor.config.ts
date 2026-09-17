@@ -7,7 +7,12 @@ const config: CapacitorConfig = {
   server: {
     url: 'https://iamoviestory.com',
     cleartext: false
-  }
+  },
+  plugins: {
+    MediaSession: {
+      presentationOptions: ['badge', 'sound', 'alert', 'banner', 'list'],
+    },
+  },
 };
 
 export default config;
