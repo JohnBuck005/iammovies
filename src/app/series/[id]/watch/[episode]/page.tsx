@@ -87,9 +87,9 @@ export default async function WatchPage({ params }: PageProps) {
   const isLocked = !isAdmin && epNum > freeAllowance && !hasActiveSubscription;
 
   return (
-    <div className="min-h-screen">
-      {/* Player */}
-      <div className="px-4 pt-4">
+    <div className="min-h-screen bg-black">
+      {/* Player — full-width 9:16 portrait */}
+      <div className="w-full">
         <VideoPlayer
           videoUrl={ep.videoUrl || undefined}
           poster={ep.thumbnail || getBunnyThumbnailUrl(ep.number, series.id) || series.poster || series.thumbnail}
