@@ -288,11 +288,13 @@ export default function VideoPlayer({
 
     const handleTouchEnd = () => {
       touchRef.current = null;
-      // Snap back if zoomed out below1
-      if (zoom < 1) {
-        setZoom(1);
-        setPan({ x: 0, y: 0 });
-      }
+      // Snap to nearest zoom level like YouTube
+      const snapPoints = [1, 1.5, 2, 3, 5];
+      const nearest = snapPoints.reduce((prev, curr) =>
+        Math.abs(curr - zoom) < Math.abs(prev - zoom) ? curr : prev
+      );
+      setZoom(nearest);
+      if (nearest === 1) setPan({ x: 0, y: 0 });
     };
 
     return (
