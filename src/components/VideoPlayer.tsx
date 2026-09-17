@@ -187,6 +187,25 @@ export default function VideoPlayer({
         if (data.level >= 0) setCurrentLevel(data.level);
       });
 
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        console.error("[VideoPlayer] HLS error:", data);
+        if (data.fatal) {
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              setLoadErr("Network error while loading video");
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              hls.recoverMediaError();
+              break;
+            default:
+              setLoadErr("Video playback error — try refreshing");
+              break;
+          }
+        }
+      });
+
+      hls.startLevel = -1;
+
       return () => {
         hls.destroy();
         hlsRef.current = null;
