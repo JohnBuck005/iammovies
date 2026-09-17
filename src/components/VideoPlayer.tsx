@@ -100,7 +100,11 @@ export default function VideoPlayer({
     }
 
     if (Hls.isSupported()) {
-      const hls = new Hls({ maxBufferLength: 30 });
+      const hls = new Hls({
+        maxBufferLength: 30,
+        capLevelToPlayerSize: false,
+        startLevel: -1, // auto-detect best quality initially
+      });
       hlsRef.current = hls;
       hls.loadSource(hlsUrl);
       hls.attachMedia(video);
@@ -115,12 +119,11 @@ export default function VideoPlayer({
         console.log("Parsed levels:", parsed);
         setLevels(parsed);
 
-        // Start at 720p if available, otherwise highest quality
-        const level720 = parsed.find((l) => l.height >= 720);
-        const startIndex = level720 ? level720.index : parsed.length - 1;
-        hls.startLevel = startIndex;
-        hls.nextLevel = startIndex;
-        setCurrentLevel(startIndex);
+        // Start at highest quality available
+        const highestIndex = parsed.length - 1;
+        hls.startLevel = highestIndex;
+        hls.nextLevel = highestIndex;
+        setCurrentLevel(highestIndex);
       });
 
       hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
@@ -254,14 +257,14 @@ export default function VideoPlayer({
           </div>
         )}
         {levels.length > 0 && (
-          <div className="absolute top-3 right-3 z-20">
+          <div className="absolute top-3 left-3 z-20">
             <select
               value={currentLevel}
               onChange={(e) => handleQualityChange(Number(e.target.value))}
-              className="bg-black/80 text-white text-[11px] font-medium rounded-md border border-white/30 px-2 py-1 backdrop-blur-md appearance-none cursor-pointer"
+              className="bg-black/70 text-white text-[13px] font-semibold rounded-lg border border-white/40 px-3 py-1.5 backdrop-blur-md appearance-none cursor-pointer"
               style={{ textAlignLast: 'center' }}
             >
-              <option value={-1}>Auto{autoLevel ? ` (720p)` : ""}</option>
+              <option value={-1}>Auto{autoLevel ? ` (${autoLevel.label})` : ""}</option>
               {levels.slice().reverse().map((l) => (
                 <option key={l.index} value={l.index}>
                   {l.label}
