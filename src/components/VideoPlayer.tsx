@@ -60,6 +60,10 @@ export default function VideoPlayer({
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const { addPoints, recordWatched } = useUser();
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const touchRef = useRef<{ dist: number; mid: { x: number; y: number }; zoom: number; pan: { x: number; y: number } } | null>(null);
+  const lastTapRef = useRef(0);
 
   // Fetch the signed manifest URL from our server route
   useEffect(() => {
@@ -235,8 +239,70 @@ export default function VideoPlayer({
         ? "Auto"
         : levels[currentLevel]?.label ?? "Auto";
 
+    // Pinch-to-zoom touch handlers
+    const getTouchDist = (touches: TouchList) => {
+      const dx = touches[0].clientX - touches[1].clientX;
+      const dy = touches[0].clientY - touches[1].clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    };
+    const getTouchMid = (touches: TouchList) => ({
+      x: (touches[0].clientX + touches[1].clientX) / 2,
+      y: (touches[0].clientY + touches[1].clientY) / 2,
+    });
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        touchRef.current = {
+          dist: getTouchDist(e.touches),
+          mid: getTouchMid(e.touches),
+          zoom,
+          pan,
+        };
+      } else if (e.touches.length === 1) {
+        // Double-tap to reset zoom
+        const now = Date.now();
+        if (now - lastTapRef.current < 300) {
+          setZoom(1);
+          setPan({ x: 0, y: 0 });
+        }
+        lastTapRef.current = now;
+      }
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+      if (e.touches.length === 2 && touchRef.current) {
+        e.preventDefault();
+        const newDist = getTouchDist(e.touches);
+        const newMid = getTouchMid(e.touches);
+        const scale = Math.max(1, Math.min(5, touchRef.current.zoom * (newDist / touchRef.current.dist)));
+        const dx = newMid.x - touchRef.current.mid.x;
+        const dy = newMid.y - touchRef.current.mid.y;
+        setZoom(scale);
+        setPan({
+          x: touchRef.current.pan.x + dx,
+          y: touchRef.current.pan.y + dy,
+        });
+      }
+    };
+
+    const handleTouchEnd = () => {
+      touchRef.current = null;
+      // Snap back if zoomed out below1
+      if (zoom < 1) {
+        setZoom(1);
+        setPan({ x: 0, y: 0 });
+      }
+    };
+
     return (
-      <div className="relative w-full bg-black" style={{ height: "100dvh", maxHeight: "100dvh" }}>
+      <div
+        className="relative w-full bg-black overflow-hidden"
+        style={{ height: "100dvh", maxHeight: "100dvh" }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <video
           key={hlsUrl ?? ""}
           ref={videoRef}
@@ -245,6 +311,11 @@ export default function VideoPlayer({
           autoPlay
           poster={poster}
           className="w-full h-full object-cover bg-black"
+          style={{
+            transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
+            transition: touchRef.current ? "none" : "transform 0.2s ease-out",
+            touchAction: "none",
+          }}
           playsInline
           onEnded={() => {
             recordWatched(seriesId, episodeNum, 100);
