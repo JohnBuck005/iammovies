@@ -53,7 +53,7 @@ export function getBunnyManifestUrl(episode: number, seriesId: string = DEFAULT_
   if (!key) return base; // unsigned — requires token-auth OFF in Bunny dashboard
   // Bunny token auth: token = HMAC-SHA256(path + expires + key), hex
   const expires = Math.floor(Date.now() / 1000) + 2 * 60 * 60; // 2h
-  const path = `/${guid}/play.m3u8`;
+  const path = `/${guid}/playlist.m3u8`;
   const hmac = crypto.createHmac("sha256", key).update(`${path}${expires}`).digest("hex");
   return `${base}?token=${hmac}&expires=${expires}`;
 }

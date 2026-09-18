@@ -166,6 +166,11 @@ export default function VideoPlayer({
       if (cancelled) return;
 
       if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        video.addEventListener("error", () => {
+          const err = video.error;
+          console.error("[VideoPlayer] Native video error:", err ? `code=${err.code} msg=${err.message}` : "unknown");
+          setLoadErr(err ? `Video error ${err.code}: ${err.message}` : "Video playback failed");
+        });
         video.src = hlsUrl;
         return;
       }
@@ -182,6 +187,12 @@ export default function VideoPlayer({
         hlsRef.current = hls;
         hls.loadSource(hlsUrl);
         hls.attachMedia(video);
+
+        video.addEventListener("error", () => {
+          const err = video.error;
+          console.error("[VideoPlayer] video.onerror:", err ? `code=${err.code} msg=${err.message}` : "unknown");
+          if (err) setLoadErr(`Video error ${err.code}: ${err.message}`);
+        });
 
         hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
           const parsed: QualityLevel[] = data.levels.map((level, index) => ({
@@ -217,8 +228,6 @@ export default function VideoPlayer({
             }
           }
         });
-
-        hls.startLevel = -1;
 
         cleanupHls = () => {
           hls.destroy();
@@ -283,6 +292,40 @@ export default function VideoPlayer({
     } catch {}
   }, []);
 
+  // --- MediaSession setup (defined before useEffects that reference it) ---
+  const setupMediaSession = useCallback(async () => {
+    const MS = await getMediaSession();
+    if (!MS) return;
+    const video = videoRef.current;
+    if (!video) return;
+
+    MS.setMetadata({
+      title: `${title} — Episode ${episodeNum}`,
+      artist: "IAmoviestory",
+      album: title,
+      artwork: poster ? [{ src: poster }] : [],
+    }).catch(() => {});
+
+    const syncState = () => {
+      MS.setPlaybackState({
+        playbackState: video.paused ? "paused" : "playing",
+      }).catch(() => {});
+    };
+
+    video.addEventListener("play", syncState);
+    video.addEventListener("pause", syncState);
+    video.addEventListener("ended", syncState);
+
+    MS.setActionHandler({ action: "play" }, () => video.play()).catch(() => {});
+    MS.setActionHandler({ action: "pause" }, () => video.pause()).catch(() => {});
+    MS.setActionHandler({ action: "seekbackward" }, () => {
+      video.currentTime = Math.max(0, video.currentTime - 10);
+    }).catch(() => {});
+    MS.setActionHandler({ action: "seekforward" }, () => {
+      video.currentTime = Math.min(video.duration, video.currentTime + 10);
+    }).catch(() => {});
+  }, [title, episodeNum, poster]);
+
   // --- Auto-resume ---
   useEffect(() => {
     const video = videoRef.current;
@@ -336,40 +379,6 @@ export default function VideoPlayer({
     document.addEventListener("leavepictureinpicture", onPiPLeave);
     return () => document.removeEventListener("leavepictureinpicture", onPiPLeave);
   }, []);
-
-  // --- MediaSession ---
-  const setupMediaSession = useCallback(async () => {
-    const MS = await getMediaSession();
-    if (!MS) return;
-    const video = videoRef.current;
-    if (!video) return;
-
-    MS.setMetadata({
-      title: `${title} — Episode ${episodeNum}`,
-      artist: "IAmoviestory",
-      album: title,
-      artwork: poster ? [{ src: poster }] : [],
-    }).catch(() => {});
-
-    const syncState = () => {
-      MS.setPlaybackState({
-        playbackState: video.paused ? "paused" : "playing",
-      }).catch(() => {});
-    };
-
-    video.addEventListener("play", syncState);
-    video.addEventListener("pause", syncState);
-    video.addEventListener("ended", syncState);
-
-    MS.setActionHandler({ action: "play" }, () => video.play()).catch(() => {});
-    MS.setActionHandler({ action: "pause" }, () => video.pause()).catch(() => {});
-    MS.setActionHandler({ action: "seekbackward" }, () => {
-      video.currentTime = Math.max(0, video.currentTime - 10);
-    }).catch(() => {});
-    MS.setActionHandler({ action: "seekforward" }, () => {
-      video.currentTime = Math.min(video.duration, video.currentTime + 10);
-    }).catch(() => {});
-  }, [title, episodeNum, poster]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -591,6 +600,9 @@ export default function VideoPlayer({
           controls
           controlsList="nodownload"
           autoPlay
+          muted
+          playsInline
+          preload="metadata"
           poster={poster}
           className="w-full h-full object-cover bg-black"
           style={{
@@ -598,7 +610,6 @@ export default function VideoPlayer({
             transition: touchRef.current ? "none" : "transform 0.2s ease-out",
             touchAction: "none",
           }}
-          playsInline
           onEnded={handleEnded}
         />
 
