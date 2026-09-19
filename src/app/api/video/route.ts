@@ -23,5 +23,8 @@ export async function GET(req: NextRequest) {
   if (!url) {
     return NextResponse.json({ error: "Episode not found" }, { status: 404, headers: corsHeaders });
   }
-  return NextResponse.json({ url }, { headers: corsHeaders });
+  // Proxy through our server to add VIDEO-RANGE:SDR (Bunny omits it;
+  // hls.js >= 1.6 requires it — see manifest proxy endpoint).
+  const manifestUrl = `${req.nextUrl.origin}/api/video/manifest?ep=${ep}&series=${seriesId}`;
+  return NextResponse.json({ url: manifestUrl }, { headers: corsHeaders });
 }
