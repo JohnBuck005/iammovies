@@ -104,10 +104,6 @@ export default function VideoPlayer({
   const lastTapRef = useRef(0);
   const tapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isGestureRef = useRef(false);
-  const [brightness, setBrightness] = useState(1);
-  const [volume, setVolume] = useState(1);
-  const [gestureIndicator, setGestureIndicator] = useState<{ type: "brightness" | "volume"; value: number } | null>(null);
-  const gestureHideRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isPiP, setIsPiP] = useState(false);
 
   // --- Immersive mode on mount ---
@@ -462,40 +458,6 @@ export default function VideoPlayer({
       isGestureRef.current = true;
       return;
     }
-
-    // One-finger vertical swipe → brightness (left) / volume (right)
-    if (e.touches.length === 1 && touchStartRef.current) {
-      const dx = e.touches[0].clientX - touchStartRef.current.x;
-      const dy = e.touches[0].clientY - touchStartRef.current.y;
-      const adx = Math.abs(dx);
-      const ady = Math.abs(dy);
-
-      if (ady > 20 && ady > adx * 1.5) {
-        isGestureRef.current = true;
-        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-        const delta = -dy / (rect.height * 0.6);
-
-        if (touchStartRef.current.side === "left") {
-          const newB = Math.max(0, Math.min(1, brightness + delta));
-          setBrightness(newB);
-          setGestureIndicator({ type: "brightness", value: newB });
-          video.style.filter = `brightness(${newB})`;
-        } else {
-          const newV = Math.max(0, Math.min(1, volume + delta));
-          setVolume(newV);
-          video.volume = newV;
-          if (video.muted) {
-            video.muted = false;
-            setIsMuted(false);
-            userInteractedRef.current = true;
-          }
-          setGestureIndicator({ type: "volume", value: newV });
-        }
-
-        if (gestureHideRef.current) clearTimeout(gestureHideRef.current);
-        gestureHideRef.current = setTimeout(() => setGestureIndicator(null), 800);
-      }
-    }
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
@@ -686,19 +648,6 @@ export default function VideoPlayer({
                 {seekFlash === "rewind" ? "⏪" : "⏩"}
               </span>
               <span className="text-white text-sm font-semibold drop-shadow-lg">10s</span>
-            </div>
-          </div>
-        )}
-
-        {/* Brightness / Volume indicator */}
-        {gestureIndicator && (
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 pointer-events-none">
-            <div className="bg-black/70 rounded-xl px-4 py-3 flex flex-col items-center gap-2 backdrop-blur-md">
-              <span className="text-white text-xs">{gestureIndicator.type === "brightness" ? "☀️" : "🔊"}</span>
-              <div className="w-20 h-1.5 bg-white/30 rounded-full overflow-hidden">
-                <div className="h-full bg-white rounded-full transition-all" style={{ width: `${gestureIndicator.value * 100}%` }} />
-              </div>
-              <span className="text-white text-[11px] font-medium">{Math.round(gestureIndicator.value * 100)}%</span>
             </div>
           </div>
         )}
