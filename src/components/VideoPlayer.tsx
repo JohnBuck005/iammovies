@@ -87,8 +87,10 @@ export default function VideoPlayer({
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [levels, setLevels] = useState<QualityLevel[]>([]);
   const [currentLevel, setCurrentLevel] = useState<number>(-1);
+  const [isMuted, setIsMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
+  const userInteractedRef = useRef(false);
   const { addPoints, recordWatched } = useUser();
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -482,6 +484,11 @@ export default function VideoPlayer({
           const newV = Math.max(0, Math.min(1, volume + delta));
           setVolume(newV);
           video.volume = newV;
+          if (video.muted) {
+            video.muted = false;
+            setIsMuted(false);
+            userInteractedRef.current = true;
+          }
           setGestureIndicator({ type: "volume", value: newV });
         }
 
@@ -550,7 +557,18 @@ export default function VideoPlayer({
           // Single tap → play/pause (delayed to distinguish from double-tap)
           lastTapRef.current = now;
           tapTimeoutRef.current = setTimeout(() => {
-            if (video) video.paused ? video.play() : video.pause();
+            if (video) {
+              if (video.paused) {
+                if (!userInteractedRef.current) {
+                  userInteractedRef.current = true;
+                  video.muted = false;
+                  setIsMuted(false);
+                }
+                video.play().catch(() => {});
+              } else {
+                video.pause();
+              }
+            }
           }, 300);
         }
       }
@@ -611,6 +629,12 @@ export default function VideoPlayer({
             touchAction: "none",
           }}
           onEnded={handleEnded}
+          onPlay={() => {
+            if (userInteractedRef.current && videoRef.current?.muted) {
+              videoRef.current.muted = false;
+              setIsMuted(false);
+            }
+          }}
         />
 
         {/* Load error */}
