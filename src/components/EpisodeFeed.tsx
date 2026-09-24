@@ -245,8 +245,21 @@ export default function EpisodeFeed({
   // (always episode 1 on first paint), avoiding a hydration mismatch.
   const [activeIdx, setActiveIdx] = useState(0);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [muted, setMuted] = useState(true);
+  // Sound ON by default — no mute button. If the browser blocks audible
+  // autoplay (needs a gesture), we fall back to muted and unmute on the very
+  // first touch, so the clip is never silent after the viewer interacts.
+  const [muted, setMuted] = useState(false);
   const [showHint, setShowHint] = useState(true);
+
+  useEffect(() => {
+    const unblock = () => setMuted(false);
+    window.addEventListener("pointerdown", unblock, { once: true });
+    window.addEventListener("touchstart", unblock, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", unblock);
+      window.removeEventListener("touchstart", unblock);
+    };
+  }, []);
 
   const activeEp = episodes[activeIdx];
 
@@ -440,15 +453,6 @@ export default function EpisodeFeed({
               <path d="M10 4v12M4 10h12" strokeLinecap="round" />
             </svg>
           )}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setMuted((m) => !m)}
-          aria-label={muted ? "Unmute" : "Mute"}
-          className="w-12 h-12 rounded-full bg-black/60 backdrop-blur border border-white/15 flex items-center justify-center hover:bg-black/80 transition"
-        >
-          <span className="text-lg leading-none">{muted ? "🔇" : "🔊"}</span>
         </button>
       </div>
 
