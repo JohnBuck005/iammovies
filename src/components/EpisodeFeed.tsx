@@ -234,7 +234,8 @@ export default function EpisodeFeed({
 }: FeedProps) {
   const router = useRouter();
   const scrollerRef = useRef<HTMLDivElement | null>(null);
-  const { recordWatched } = useUser();
+  const { recordWatched, inWatchlist, toggleWatchlist } = useUser();
+  const saved = inWatchlist(seriesId);
 
   const isLocked = (ep: FeedEpisode) =>
     !isAdmin && ep.number > freeAllowance && !hasSubscription;
@@ -422,6 +423,23 @@ export default function EpisodeFeed({
           <span className="text-[9px] text-white/90 leading-none mt-0.5">
             {activeEp?.number}-{episodes[episodes.length - 1]?.number}
           </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => toggleWatchlist(seriesId)}
+          aria-label={saved ? "Remove from My List" : "Add to My List"}
+          className="w-12 h-12 rounded-full bg-black/60 backdrop-blur border border-white/15 flex items-center justify-center hover:bg-black/80 transition"
+        >
+          {saved ? (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-[#D4AF37]" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M5 2a2 2 0 00-2 2v14l7-4 7 4V4a2 2 0 00-2-2H5z" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path d="M10 4v12M4 10h12" strokeLinecap="round" />
+            </svg>
+          )}
         </button>
 
         <button
