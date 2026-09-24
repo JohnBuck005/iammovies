@@ -17,8 +17,9 @@ function getBunnyThumbnailUrl(episodeNumber: number, seriesId: string): string |
 const TABS = [
   { key: "trending", label: "Trending", icon: "🔥" },
   { key: "new", label: "New", icon: "✨" },
-  { key: "premium", label: "Premium", icon: "💎" },
-  { key: "discover", label: "Discover", icon: null },
+  // 💎 now sits on Discover — the Premium tab is retired (premium series keep
+  // their badge on the poster)
+  { key: "discover", label: "Discover", icon: "💎" },
 ];
 
 export default function Header() {
@@ -121,8 +122,8 @@ export default function Header() {
           )}
         </form>
 
-        {/* Category tabs */}
-        <div className="flex gap-4 mt-3 overflow-x-auto scrollbar-hide">
+        {/* Category tabs — 3 only now, spread across the row */}
+        <div className="flex gap-4 mt-3 justify-between overflow-x-auto scrollbar-hide">
           {TABS.map((tab) => (
             <button
               key={tab.key}
