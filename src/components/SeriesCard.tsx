@@ -57,7 +57,7 @@ export default function SeriesCard({ series }: { series: Series }) {
           </div>
           {/* Views live on the title line so the genre row gets the full card
               width — that is what lets two-word genres fit on ONE line. */}
-          <div className="flex items-center gap-[3px] flex-wrap mt-0.5">
+          <div className="flex items-center gap-[2px] flex-wrap mt-0.5">
             {series.genre.split(/[\s/]+/).filter(Boolean).map((tag) => (
               <span key={tag} className="genre-badge">
                 {tag}
