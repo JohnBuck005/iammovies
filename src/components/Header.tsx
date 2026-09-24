@@ -29,6 +29,10 @@ export default function Header() {
   const [query, setQuery] = useState("");
   const [focused, setFocused] = useState(false);
 
+  // Immersive playback: the ReelShort-style feed owns the whole screen, so no
+  // header chrome on series routes (/series and /series/[id]... only).
+  if (pathname?.startsWith("/series/")) return null;
+
   const results = query.trim()
     ? seriesData
         .flatMap((s) => (s.episodeList ?? []).map((e) => ({ series: s, episode: e })))

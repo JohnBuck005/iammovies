@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useUser } from "@/components/UserProvider";
+import { saveCW, getContinueWatching, findCW, type CWEntry } from "@/lib/continueWatching";
 
 // hls.js — dynamically imported on client only; eagerly importing it at module
 // scope causes a TDZ in Next.js 16 Turbopack SSR ("Cannot access '$' before
@@ -41,29 +42,9 @@ type QualityLevel = {
 };
 
 // --- Continue Watching helpers ---
-const CW_KEY = "iam_continue_watching";
-type CWEntry = { seriesId: string; episode: number; progress: number; ts: number };
-
-function saveCW(entry: CWEntry) {
-  try {
-    const raw = localStorage.getItem(CW_KEY);
-    const list: CWEntry[] = raw ? JSON.parse(raw) : [];
-    const idx = list.findIndex((e) => e.seriesId === entry.seriesId);
-    if (idx >= 0) list[idx] = entry;
-    else list.push(entry);
-    list.sort((a, b) => b.ts - a.ts);
-    localStorage.setItem(CW_KEY, JSON.stringify(list.slice(0, 20)));
-  } catch {}
-}
-
-export function getContinueWatching(): CWEntry[] {
-  try {
-    const raw = localStorage.getItem(CW_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
+// Implementation lives in @/lib/continueWatching (shared with EpisodeFeed) so
+// both players read and write the same localStorage shape.
+export { getContinueWatching };
 
 export default function VideoPlayer({
   videoUrl,
@@ -332,19 +313,11 @@ export default function VideoPlayer({
     const onLoaded = () => {
       if (video.duration > 0) {
         // Check saved progress for this episode
-        try {
-          const raw = localStorage.getItem(CW_KEY);
-          if (raw) {
-            const list: CWEntry[] = JSON.parse(raw);
-            const entry = list.find(
-              (e) => e.seriesId === seriesId && e.episode === episodeNum
-            );
-            if (entry && entry.progress > 10) {
-              const seekTime = (entry.progress / 100) * video.duration;
-              video.currentTime = Math.min(seekTime, video.duration - 5);
-            }
-          }
-        } catch {}
+        const entry = findCW(seriesId, episodeNum);
+        if (entry && entry.progress > 10) {
+          const seekTime = (entry.progress / 100) * video.duration;
+          video.currentTime = Math.min(seekTime, video.duration - 5);
+        }
       }
       setupMediaSession();
     };

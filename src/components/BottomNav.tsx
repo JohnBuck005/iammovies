@@ -58,6 +58,9 @@ export default function BottomNav() {
   const { watchlist } = useUser();
   const myListCount = watchlist.length;
 
+  // Immersive playback: hidden while the feed is on screen
+  if (pathname?.startsWith("/series/")) return null;
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-[#0a0a0a]/95 backdrop-blur-sm border-t border-[#1a1a1a] z-50">
       <div className="flex justify-around items-center py-2">

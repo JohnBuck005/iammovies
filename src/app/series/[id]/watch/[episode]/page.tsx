@@ -1,11 +1,10 @@
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
-import Link from "next/link";
-import VideoPlayerClient from "@/components/VideoPlayerClient";
 import { getSeriesById, getEpisode, seriesData } from "@/data/series";
 import { getMergedSeriesById } from "@/lib/episodes";
 import { getServerUserEmail, getSubscriptionStatus } from "@/lib/supabaseServer";
 import { getEpisodeGuid, PULLZONE } from "@/lib/bunny";
+import EpisodeFeed from "@/components/EpisodeFeed";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -64,6 +63,9 @@ export async function generateStaticParams() {
   return params;
 }
 
+// /series/[id]/watch/[episode] opens the same immersive feed as /series/[id],
+// started at the requested episode — links, search results and continue
+// watching all land in one TikTok-style player.
 export default async function WatchPage({ params }: PageProps) {
   const { id, episode } = await params;
   const epNum = Number(episode);
@@ -86,47 +88,31 @@ export default async function WatchPage({ params }: PageProps) {
   // Free-episode allowance stays a per-series NUMBER rule (never the isFree flags)
   // so a DB or static flag cannot accidentally make a later episode free.
   const freeAllowance = series.freeEpisodes ?? 5;
-  const isLocked = !isAdmin && epNum > freeAllowance && !hasActiveSubscription;
+
+  const episodes = (mergedSeries?.episodeList ?? series.episodeList ?? []).map((e) => ({
+    number: e.number,
+    title: e.title,
+    duration: e.duration,
+    videoUrl: e.videoUrl ?? null,
+    thumbnail: e.thumbnail || getBunnyThumbnailUrl(e.number, series.id) || series.thumbnail,
+  }));
+
+  if (!episodes.length) return notFound();
 
   return (
-    <div className="min-h-screen bg-black">
-      {/* Player — full-width 9:16 portrait */}
-      <div className="w-full">
-        <VideoPlayerClient
-          videoUrl={ep.videoUrl || undefined}
-          poster={ep.thumbnail || getBunnyThumbnailUrl(ep.number, series.id) || series.poster || series.thumbnail}
-          title={`${series.title} — Ep ${ep.number}`}
-          episodeNum={ep.number}
-          isLocked={isLocked}
-          seriesId={series.id}
-          freeEpisodes={freeAllowance}
-          totalEpisodes={mergedSeries?.episodeList?.length || series.episodes}
-        />
-      </div>
-
-      {/* Episode info */}
-      <div className="px-4 py-4">
-        <Link
-          href={`/series/${id}`}
-          className="inline-block text-xs text-[#D4AF37] mb-2 hover:underline"
-        >
-          ← Back to episodes
-        </Link>
-        <h1 className="text-lg font-bold">{series.title}</h1>
-        <p className="text-[#aaa] text-sm mt-1">
-          Ep {ep.number}: {ep.title}
-        </p>
-
-        {isLocked && (
-          <div className="mt-4 rounded-lg border border-[#D4AF37]/40 bg-[#D4AF37]/10 p-4 text-sm text-[#D4AF37]">
-            Premium episode.{" "}
-            <Link href="/subscribe" className="underline">
-              Subscribe
-            </Link>{" "}
-            to unlock all episodes.
-          </div>
-        )}
-      </div>
-    </div>
+    <EpisodeFeed
+      seriesId={series.id}
+      title={series.title}
+      description={series.description}
+      genre={series.genre}
+      rating={series.rating}
+      views={series.views}
+      poster={series.poster || series.thumbnail}
+      episodes={episodes}
+      startEpisode={epNum}
+      freeAllowance={freeAllowance}
+      isAdmin={isAdmin}
+      hasSubscription={hasActiveSubscription}
+    />
   );
 }
