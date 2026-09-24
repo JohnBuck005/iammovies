@@ -51,18 +51,18 @@ export default function SeriesCard({ series }: { series: Series }) {
 
         {/* Info */}
         <div className="p-1.5">
-          <h3 className="text-xs font-medium line-clamp-1">{series.title}</h3>
-          <div className="flex items-center justify-between gap-1 mt-1">
-            {/* Two-word genres ("Romance Drama") render as two tiny tags so a
-                second tag still fits on the same line. */}
-            <div className="flex items-center gap-1 flex-wrap min-w-0">
-              {series.genre.split(/[\s/]+/).filter(Boolean).map((tag) => (
-                <span key={tag} className="genre-badge">
-                  {tag}
-                </span>
-              ))}
-            </div>
-            <span className="text-[#888] text-[9px] shrink-0">{series.views}</span>
+          <div className="flex items-start justify-between gap-1">
+            <h3 className="text-xs font-medium line-clamp-1 min-w-0 flex-1">{series.title}</h3>
+            <span className="text-[#888] text-[9px] shrink-0 leading-4">{series.views}</span>
+          </div>
+          {/* Views live on the title line so the genre row gets the full card
+              width — that is what lets two-word genres fit on ONE line. */}
+          <div className="flex items-center gap-[3px] flex-wrap mt-0.5">
+            {series.genre.split(/[\s/]+/).filter(Boolean).map((tag) => (
+              <span key={tag} className="genre-badge">
+                {tag}
+              </span>
+            ))}
           </div>
         </div>
       </div>
