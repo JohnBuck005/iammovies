@@ -27,7 +27,7 @@ export default function WatchlistPage() {
           <span className="text-4xl">📂</span>
           <p className="text-[#aaa] mt-4">Your list is empty</p>
           <p className="text-[#666] text-sm mt-1">
-            Tap the + on any series to save it here
+            Open any series and tap Add to My List to save it here
           </p>
           <Link
             href="/"

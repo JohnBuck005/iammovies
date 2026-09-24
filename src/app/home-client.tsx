@@ -7,13 +7,6 @@ import Link from "next/link";
 import SeriesCard from "@/components/SeriesCard";
 import { getContinueWatching } from "@/components/VideoPlayer";
 
-function parseViews(v: string): number {
-  const s = v.trim().toUpperCase();
-  if (s.endsWith("M")) return parseFloat(s) * 1_000_000;
-  if (s.endsWith("K")) return parseFloat(s) * 1_000;
-  return parseFloat(s) || 0;
-}
-
 function ContinueWatching() {
   const [cw, setCw] = useState<{ seriesId: string; episode: number; progress: number; ts: number }[]>([]);
 
@@ -65,7 +58,7 @@ function ContinueWatching() {
 // (/series/[id]) once the viewer picks a series.
 export default function Home() {
   const searchParams = useSearchParams();
-  const tab = searchParams.get("tab") ?? "discover";
+  const tab = searchParams.get("tab") ?? "trending";
 
   let filtered = seriesData;
   if (tab === "new") {
@@ -73,7 +66,9 @@ export default function Home() {
   } else if (tab === "premium") {
     filtered = seriesData.filter((s) => s.isPremium);
   } else if (tab === "trending") {
-    filtered = [...seriesData].sort((a, b) => parseViews(b.views) - parseViews(a.views));
+    // Trending is the new default tab and currently mirrors Discover
+    // (the full catalogue) — same set, same order, per spec.
+    filtered = seriesData;
   }
 
   return (
@@ -81,11 +76,11 @@ export default function Home() {
       {/* Continue Watching only appears once there is local progress */}
       <ContinueWatching />
 
-      <section className="px-4 pt-4">
+      <section className="px-3 pt-3">
         {filtered.length === 0 ? (
           <div className="text-[#888] text-sm py-10 text-center">Nothing here yet.</div>
         ) : (
-          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
             {filtered.map((series) => (
               <SeriesCard key={series.id} series={series} />
             ))}

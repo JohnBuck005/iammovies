@@ -12,17 +12,19 @@ function getBunnyThumbnailUrl(episodeNumber: number, seriesId: string): string |
   return `https://${PULLZONE}/${guid}/thumbnail.jpg`;
 }
 
+// Trending swapped places with Discover: it is now the first (default) tab and
+// carries the full Discover catalogue for now.
 const TABS = [
-  { key: "discover", label: "Discover", icon: null },
+  { key: "trending", label: "Trending", icon: "🔥" },
   { key: "new", label: "New", icon: "✨" },
   { key: "premium", label: "Premium", icon: "💎" },
-  { key: "trending", label: "Trending", icon: "🔥" },
+  { key: "discover", label: "Discover", icon: null },
 ];
 
 export default function Header() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const activeTab = pathname === "/" ? searchParams.get("tab") ?? "discover" : "discover";
+  const activeTab = pathname === "/" ? searchParams.get("tab") ?? "trending" : "trending";
 
   const [query, setQuery] = useState("");
   const [focused, setFocused] = useState(false);
@@ -36,7 +38,7 @@ export default function Header() {
   const goSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (query.trim()) {
-      window.location.href = `/?tab=discover&q=${encodeURIComponent(query.trim())}`;
+      window.location.href = `/?tab=trending&q=${encodeURIComponent(query.trim())}`;
       setFocused(false);
     }
   };
