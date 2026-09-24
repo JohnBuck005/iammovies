@@ -37,15 +37,19 @@ body {
   box-shadow: 0 8px 25px rgba(0,0,0,0.5);
 }
 
-/* Genre badge */
+/* Genre badge — deliberately tiny so two tags fit on one line inside a
+   poster card without stealing height from the poster art. */
 .genre-badge {
-  background: rgba(212, 175, 55, 0.2);
+  background: rgba(212, 175, 55, 0.15);
   color: var(--accent);
-  font-size: 0.65rem;
-  padding: 2px 6px;
-  border-radius: 4px;
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  font-size: 0.5rem;      /* 8px — was 0.65rem */
+  line-height: 1.1;
+  padding: 1px 4px;       /* was 2px 6px */
+  border-radius: 3px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
 }
 
 /* Lock overlay */

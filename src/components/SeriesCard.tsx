@@ -50,11 +50,19 @@ export default function SeriesCard({ series }: { series: Series }) {
         </div>
 
         {/* Info */}
-        <div className="p-2">
-          <h3 className="text-sm font-medium line-clamp-1">{series.title}</h3>
-          <div className="flex items-center justify-between mt-1">
-            <span className="genre-badge">{series.genre}</span>
-            <span className="text-[#888] text-xs">{series.views}</span>
+        <div className="p-1.5">
+          <h3 className="text-xs font-medium line-clamp-1">{series.title}</h3>
+          <div className="flex items-center justify-between gap-1 mt-1">
+            {/* Two-word genres ("Romance Drama") render as two tiny tags so a
+                second tag still fits on the same line. */}
+            <div className="flex items-center gap-1 flex-wrap min-w-0">
+              {series.genre.split(/[\s/]+/).filter(Boolean).map((tag) => (
+                <span key={tag} className="genre-badge">
+                  {tag}
+                </span>
+              ))}
+            </div>
+            <span className="text-[#888] text-[9px] shrink-0">{series.views}</span>
           </div>
         </div>
       </div>
