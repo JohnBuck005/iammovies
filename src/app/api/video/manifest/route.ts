@@ -21,12 +21,29 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: `Bunny returned ${res.status}` }, { status: res.status });
     }
     const manifest = await res.text();
+
+    // Bunny's master lists RELATIVE variant URIs ("360p/video.m3u8"), which
+    // resolve correctly against the CDN but, once proxied through
+    // /api/video/manifest, would resolve against OUR domain -> /api/video/360p/video.m3u8
+    // -> 404. The 404 body is then handed to the player, which surfaces as
+    // "Demuxer error could not parse" / video error 4 on Android.
+    // Fix: rewrite URI lines to absolute CDN URLs (CDN sends CORS *).
+    const queryIndex = bunnyUrl.indexOf("?");
+    const bunnyBase = queryIndex === -1 ? bunnyUrl : bunnyUrl.slice(0, queryIndex);
+    const bunnyQuery = queryIndex === -1 ? "" : bunnyUrl.slice(queryIndex);
+    const dir = bunnyBase.replace(/\/[^/]*$/, ""); // strip playlist.m3u8
+
     // Add VIDEO-RANGE:SDR to every EXT-X-STREAM-INF line that lacks it
     const fixed = manifest
       .split(/\r?\n/)
       .map((line) => {
         if (line.startsWith("#EXT-X-STREAM-INF") && !line.includes("VIDEO-RANGE=")) {
           return line + ",VIDEO-RANGE=SDR";
+        }
+        // URI line (not a tag, not blank): make it absolute on the CDN
+        if (!line.startsWith("#") && line.trim() !== "") {
+          if (/^https?:\/\//.test(line) || line.startsWith("/")) return line;
+          return `${dir}/${line.replace(/^\.\//, "")}${bunnyQuery}`;
         }
         return line;
       })
