@@ -65,6 +65,7 @@ function FeedPlayer({
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const lastSaveRef = useRef(0);
+  const userPausedRef = useRef(false);
   const src = episode.videoUrl;
 
   // 1. resolve the manifest URL while active (/api/video returns { url })
@@ -148,24 +149,36 @@ function FeedPlayer({
     };
   }, [hlsUrl, active]);
 
+  // Attempt playback. Only NotAllowedError (browser policy) downgrades to
+  // muted — NotSupportedError just means hls.js has not attached the source
+  // yet, which the onCanPlay handler retries. This distinction matters:
+  // treating "no source yet" as "blocked" used to leave clips silent.
+  const tryPlay = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.play().catch((err) => {
+      if (err?.name === "NotAllowedError") {
+        v.muted = true;
+        setMuted(true);
+        v.play().catch(() => {});
+      }
+    });
+  };
+
   // 3. play only the active episode; pause the rest
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
     if (active && hlsUrl) {
       v.muted = muted;
-      v.play().catch(() => {
-        // autoplay with sound refused — fall back to muted
-        v.muted = true;
-        setMuted(true);
-        v.play().catch(() => {});
-      });
+      if (!userPausedRef.current) tryPlay();
     } else {
       try {
         v.pause();
       } catch {}
     }
-  }, [active, hlsUrl, muted, setMuted]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, hlsUrl, muted]);
 
   const saveProgress = () => {
     const v = videoRef.current;
@@ -192,6 +205,17 @@ function FeedPlayer({
         muted={muted}
         poster={episode.thumbnail ?? undefined}
         className="absolute inset-0 w-full h-full object-contain bg-black"
+        // source just became available (or a seek finished): start playback
+        // unless the viewer paused it themselves
+        onCanPlay={() => {
+          if (active && !userPausedRef.current) tryPlay();
+        }}
+        onPlay={() => {
+          userPausedRef.current = false;
+        }}
+        onPause={() => {
+          if (active) userPausedRef.current = true;
+        }}
         onTimeUpdate={saveProgress}
         onEnded={() => {
           saveCW({ seriesId, episode: episode.number, progress: 100, ts: Date.now() });
