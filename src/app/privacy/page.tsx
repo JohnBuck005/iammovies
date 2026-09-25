@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Privacy Policy — IAmoviestory",
@@ -12,7 +13,7 @@ export default function PrivacyPage() {
       <div className="mx-auto max-w-3xl px-4 py-16">
         <h1 className="mb-2 text-3xl font-bold text-white">Privacy Policy</h1>
         <p className="mb-8 text-sm text-gray-500">
-          Last updated: September 17, 2026
+          Last updated: September 25, 2026
         </p>
 
         <section className="space-y-6 leading-relaxed">
@@ -23,17 +24,26 @@ export default function PrivacyPage() {
             <p>
               <strong>Account Information.</strong> When you sign in using your
               email address (magic link or one-time code), we store your email
-              to manage your account, watchlist, and viewing history.
+              address to create and manage your account.
             </p>
             <p className="mt-2">
-              <strong>Usage Data.</strong> We collect information about how you
-              use the app — series you watch, episodes you complete, time spent
-              viewing, and interaction with features like watchlist and rewards.
+              <strong>Your library and viewing progress.</strong> We store the
+              series you save to My List and how far you are in each episode,
+              linked to your account, so your list and resume point follow you
+              across devices. On this device, guests&apos; list and progress are
+              kept locally until they sign in.
             </p>
             <p className="mt-2">
-              <strong>Device Information.</strong> We may collect device type,
-              operating system version, app version, and a device token for push
-              notifications.
+              <strong>Subscription status.</strong> We store whether your
+              account has an active subscription and which plan it is on.
+            </p>
+            <p className="mt-2">
+              <strong>What we do not collect.</strong> We do not run analytics
+              or crash-reporting SDKs, we do not send push notifications, and we
+              do not collect your location, contacts, device identifiers,
+              advertising IDs, search history, or payment card details. Searches
+              you type are filtered on your device and are never transmitted to
+              us.
             </p>
           </div>
 
@@ -43,11 +53,10 @@ export default function PrivacyPage() {
             </h2>
             <ul className="list-inside list-disc space-y-1">
               <li>To provide and maintain the IAmoviestory service</li>
-              <li>To manage your account and subscription</li>
-              <li>To personalize your experience and recommend content</li>
-              <li>To send push notifications about new series and updates</li>
-              <li>To process reward points and track viewing progress</li>
-              <li>To improve our service and fix technical issues</li>
+              <li>To sign you in and manage your account</li>
+              <li>To sync your My List and viewing progress across devices</li>
+              <li>To show and manage your subscription status</li>
+              <li>To respond to your requests, including deletion requests</li>
             </ul>
           </div>
 
@@ -56,18 +65,21 @@ export default function PrivacyPage() {
               3. Data Sharing
             </h2>
             <p>
-              We do not sell your personal information. We may share data with:
+              We do not sell your personal information, and we do not share it
+              with advertisers. We use service providers that process data only
+              on our behalf:
             </p>
             <ul className="list-inside list-disc space-y-1 mt-2">
               <li>
-                <strong>Payment processors</strong> (PayPal) to handle
-                transactions
+                <strong>Supabase</strong> — sign-in (email) and database
+                storage
               </li>
               <li>
-                <strong>Analytics services</strong> to understand usage patterns
+                <strong>Vercel</strong> — hosting and transport
               </li>
               <li>
-                <strong>Push notification services</strong> to deliver alerts
+                <strong>Bunny CDN</strong> — video delivery (streams media; no
+                account data)
               </li>
             </ul>
             <p className="mt-2">
@@ -96,7 +108,6 @@ export default function PrivacyPage() {
               <li>Access and download your personal data</li>
               <li>Request correction of inaccurate data</li>
               <li>Request deletion of your account and data</li>
-              <li>Opt out of push notifications at any time</li>
             </ul>
             <p className="mt-2">
               To exercise these rights, contact us at the email below.
@@ -118,8 +129,9 @@ export default function PrivacyPage() {
               7. Changes to This Policy
             </h2>
             <p>
-              We may update this policy from time to time. We will notify you
-              of significant changes through the app or by email.
+              We may update this policy from time to time. The latest version
+              is always published on this page, with the date it was last
+              updated at the top.
             </p>
           </div>
 
@@ -135,6 +147,16 @@ export default function PrivacyPage() {
               >
                 privacy@iamoviestory.com
               </a>
+            </p>
+            <p className="mt-3 text-sm text-gray-500">
+              See also our{" "}
+              <Link
+                href="/"
+                className="text-[#D4AF37] underline hover:text-[#e6c35a]"
+              >
+                home page
+              </Link>
+              .
             </p>
           </div>
         </section>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Capacitor } from "@capacitor/core";
 
 type PlanId = "monthly" | "quarterly" | "yearly";
 
@@ -34,6 +35,20 @@ export default function SubscribePage() {
 
   const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || "";
   const hasAutoCheckout = !!paypalClientId;
+
+  // Play Store build: no purchase flow inside the app (Google Play Billing
+  // policy forbids steering users to external payment for digital goods).
+  // PayPal checkout and the proof-of-payment flow stay web-only; in the app
+  // this page is informational.
+  const [isNative, setIsNative] = useState(false);
+  useEffect(() => {
+    // `?ui=native` is a test hook so the app-only branch can be verified in a
+    // browser (the real flag is the Capacitor WebView).
+    const forced =
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("ui") === "native";
+    setIsNative(Capacitor.isNativePlatform() || forced);
+  }, []);
 
   useEffect(() => {
     setSuccess(getQueryParam("success") === "1");
@@ -189,58 +204,78 @@ export default function SubscribePage() {
             })}
           </div>
 
-          {/* PayPal auto-checkout */}
-          {hasAutoCheckout ? (
-            <div className="bg-[#1a1a1a] rounded-xl p-5 border border-[#333] mb-4">
-              <h3 className="font-bold text-center mb-2">Pay with PayPal</h3>
-              <p className="text-[#aaa] text-xs text-center mb-4">
-                Instant access after payment. Subscription auto-renews.
+          {/* Purchase flow — web only. Inside the app (Play Store build) this
+              page is informational: Google Play Billing policy forbids
+              steering users to external payment for digital goods. */}
+          {isNative ? (
+            <div className="bg-[#1a1a1a] rounded-xl p-5 border border-[#333] mb-4 text-center">
+              <h3 className="font-bold mb-2">Subscriptions in the app</h3>
+              <p className="text-[#aaa] text-xs">
+                Subscriptions aren&apos;t available in the app yet. Sign in with
+                the same email and your access follows your account.
               </p>
-
-              <div
-                id="paypal-button-container"
-                data-plan={plan}
-                data-loading={loading ? "true" : "false"}
-              />
-
-              {!paypalReady && (
-                <div className="text-center text-xs text-[#888]">Loading checkout…</div>
-              )}
-
-              {error && <p className="text-red-400 text-xs text-center mt-3">{error}</p>}
             </div>
-          ) : null}
+          ) : (
+            <>
+              {/* PayPal auto-checkout */}
+              {hasAutoCheckout ? (
+                <div className="bg-[#1a1a1a] rounded-xl p-5 border border-[#333] mb-4">
+                  <h3 className="font-bold text-center mb-2">Pay with PayPal</h3>
+                  <p className="text-[#aaa] text-xs text-center mb-4">
+                    Instant access after payment. Subscription auto-renews.
+                  </p>
 
-          {/* PayPal.Me fallback */}
-          <div className="bg-[#1a1a1a] rounded-xl p-5 border border-[#333] mb-4">
-            <h3 className="font-bold text-center mb-2">Pay with PayPal.Me</h3>
-            <p className="text-[#aaa] text-xs text-center mb-4">
-              Send payment manually, then submit proof below for access.
-            </p>
-            <div className="text-center">
-              <a
-                href={process.env.NEXT_PUBLIC_PAYPAL_ME_LINK || "https://paypal.me/SandraKitengie"}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-block bg-[#FFC439] text-black px-6 py-3 rounded-lg text-sm font-bold hover:bg-[#e6b030] transition"
-              >
-                Pay with PayPal.Me
-              </a>
-            </div>
-          </div>
+                  <div
+                    id="paypal-button-container"
+                    data-plan={plan}
+                    data-loading={loading ? "true" : "false"}
+                  />
 
-          <div className="text-center mt-4 mb-6">
-            <Link href="/claim" className="text-xs text-[#D4AF37] hover:underline">
-              Already paid? Submit proof here →
-            </Link>
-          </div>
+                  {!paypalReady && (
+                    <div className="text-center text-xs text-[#888]">Loading checkout…</div>
+                  )}
 
-          {/* Terms */}
+                  {error && <p className="text-red-400 text-xs text-center mt-3">{error}</p>}
+                </div>
+              ) : null}
+
+              {/* PayPal.Me fallback */}
+              <div className="bg-[#1a1a1a] rounded-xl p-5 border border-[#333] mb-4">
+                <h3 className="font-bold text-center mb-2">Pay with PayPal.Me</h3>
+                <p className="text-[#aaa] text-xs text-center mb-4">
+                  Send payment manually, then submit proof below for access.
+                </p>
+                <div className="text-center">
+                  <a
+                    href={process.env.NEXT_PUBLIC_PAYPAL_ME_LINK || "https://paypal.me/SandraKitengie"}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-block bg-[#FFC439] text-black px-6 py-3 rounded-lg text-sm font-bold hover:bg-[#e6b030] transition"
+                  >
+                    Pay with PayPal.Me
+                  </a>
+                </div>
+              </div>
+
+              <div className="text-center mt-4 mb-6">
+                <Link href="/claim" className="text-xs text-[#D4AF37] hover:underline">
+                  Already paid? Submit proof here →
+                </Link>
+              </div>
+            </>
+          )}
+
+          {/* Legal */}
           <div className="text-center mt-6">
             <p className="text-[#666] text-xs">
-              Cancel anytime. Subscription auto-renews.{" "}
-              <a href="#" className="text-[#D4AF37]">Terms</a> ·{" "}
-              <a href="#" className="text-[#D4AF37]">Privacy</a>
+              {isNative ? (
+                <>Subscriptions are not sold in the app. </>
+              ) : (
+                <>Cancel anytime. Subscription auto-renews. </>
+              )}
+              <Link href="/privacy" className="text-[#D4AF37]">
+                Privacy
+              </Link>
             </p>
           </div>
         </>
