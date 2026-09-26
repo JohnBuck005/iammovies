@@ -6,7 +6,22 @@ import { UserProvider } from "@/components/UserProvider";
 import { Suspense } from "react";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 
+// `NEXT_PUBLIC_BASE_URL` is http://localhost:3000 in .env.local. If that value ever
+// reached production, every shared link would advertise itself as a localhost URL
+// and render no image, so only trust it when it is a real https host.
+function resolveMetadataBase(): URL {
+  const raw = process.env.NEXT_PUBLIC_BASE_URL;
+  if (raw && raw.startsWith("https://") && !raw.includes("localhost")) {
+    return new URL(raw);
+  }
+  return new URL("https://iamoviestory.com");
+}
+
 export const metadata: Metadata = {
+  // Required for the relative openGraph.url / images in child routes to resolve to
+  // absolute URLs. Crawlers (Facebook, WhatsApp, Instagram) reject relative ones,
+  // so without this every shared link renders with no image.
+  metadataBase: resolveMetadataBase(),
   title: "IAmoviestory - Short Drama Streaming",
   description: "Watch captivating short drama series. Free episodes on every series.",
   openGraph: {

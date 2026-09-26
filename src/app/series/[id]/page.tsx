@@ -19,17 +19,22 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return params.then(({ id }) => {
     const series = getSeriesById(id);
     if (!series) return { title: "Not Found" };
+    const title = `${series.title} — IAmoviestory`;
+    // Same-origin generated card, consistent with the episode pages.
+    const ogImage = `/api/og?series=${encodeURIComponent(series.id)}&ep=1`;
     return {
-      title: `${series.title} — IAmoviestory`,
+      title,
       description: series.description,
+      alternates: { canonical: `/series/${series.id}` },
       openGraph: {
-        title: `${series.title} — IAmoviestory`,
+        title,
         description: series.description,
         type: "website",
         url: `/series/${series.id}`,
+        siteName: "IAmoviestory",
         images: [
           {
-            url: series.poster || series.thumbnail,
+            url: ogImage,
             width: 1200,
             height: 630,
             alt: series.title,
@@ -38,9 +43,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       },
       twitter: {
         card: "summary_large_image",
-        title: `${series.title} — IAmoviestory`,
+        title,
         description: series.description,
-        images: [series.poster || series.thumbnail],
+        images: [ogImage],
       },
     };
   });

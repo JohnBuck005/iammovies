@@ -26,17 +26,32 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const merged = await getMergedSeriesById(id).catch(() => null as Awaited<ReturnType<typeof getMergedSeriesById>>);
   const ep = merged?.episodeList?.find((candidate) => candidate.number === epNum) ?? getEpisode(id, epNum);
   if (!series || !ep) return { title: "Not Found" };
+
+  const epLabel = `Ep ${ep.number}: ${ep.title}`;
+  const title = `${series.title} — ${epLabel}`;
+  // Lead with the series premise (that is the hook in a feed), then the episode.
+  // The old string just echoed the title back, which reads as spam in a card.
+  const hook = series.description.split(/(?<=\.)\s/)[0];
+  const description = `${hook} Episode ${ep.number}: ${ep.title}. Watch free on IAmoviestory.`;
+  // Generated same-origin card. Deliberately NOT the Bunny thumbnail: the CDN
+  // 403s every referer except iamoviestory.com, so a Facebook/WhatsApp crawler
+  // fetches nothing and the card renders image-less. Also fixes the local
+  // thumbnails being 848x576 rather than the 1200x630 link previews want.
+  const ogImage = `/api/og?series=${encodeURIComponent(id)}&ep=${ep.number}`;
+
   return {
-    title: `${series.title} — Ep ${ep.number}: ${ep.title}`,
-    description: `${series.title}. Episode ${ep.number}: ${ep.title}. Watch on IAmoviestory.`,
+    title,
+    description,
+    alternates: { canonical: `/series/${id}/watch/${episode}` },
     openGraph: {
-      title: `${series.title} — Ep ${ep.number}: ${ep.title}`,
-      description: `${series.title}. Episode ${ep.number}: ${ep.title}. Watch on IAmoviestory.`,
+      title,
+      description,
       type: "video.episode",
       url: `/series/${id}/watch/${episode}`,
+      siteName: "IAmoviestory",
       images: [
         {
-          url: ep.thumbnail || getBunnyThumbnailUrl(ep.number, id) || series.poster || series.thumbnail,
+          url: ogImage,
           width: 1200,
           height: 630,
           alt: `${series.title} Episode ${ep.number}`,
@@ -45,9 +60,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     },
     twitter: {
       card: "summary_large_image",
-      title: `${series.title} — Ep ${ep.number}: ${ep.title}`,
-      description: `${series.title}. Episode ${ep.number}: ${ep.title}.`,
-      images: [ep.thumbnail || getBunnyThumbnailUrl(ep.number, id) || series.poster || series.thumbnail],
+      title,
+      description,
+      images: [ogImage],
     },
   };
 }

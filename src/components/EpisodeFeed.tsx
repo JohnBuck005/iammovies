@@ -12,6 +12,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { saveCW, findCWForSeries } from "@/lib/continueWatching";
 import { useUser } from "@/components/UserProvider";
+import ShareSheet from "@/components/ShareSheet";
 
 type HlsType = typeof import("hls.js").default;
 
@@ -287,6 +288,13 @@ export default function EpisodeFeed({
 
   const activeEp = episodes[activeIdx];
 
+  // First sentence of the series premise, used as the share caption so a pasted
+  // link carries its own hook into the social app.
+  const premiseHook = useMemo(
+    () => (description || "").split(/(?<=\.)\s/)[0] || "",
+    [description]
+  );
+
   // Jump to the starting episode on mount / when the route's episode changes
   useEffect(() => {
     const el = scrollerRef.current;
@@ -478,6 +486,21 @@ export default function EpisodeFeed({
             </svg>
           )}
         </button>
+
+        {/* Share the current episode. Renders nothing until the client knows
+            whether navigator.share exists, so the rail does not jump on mount. */}
+        {activeEp ? (
+          <div className="w-12 h-12 rounded-full bg-black/60 backdrop-blur border border-white/15 flex items-center justify-center">
+            <ShareSheet
+              seriesId={seriesId}
+              episodeNumber={activeEp.number}
+              seriesTitle={title}
+              episodeTitle={activeEp.title || `Episode ${activeEp.number}`}
+              hook={premiseHook}
+              className="items-center"
+            />
+          </div>
+        ) : null}
       </div>
 
       {/* ---- swipe hint ---- */}
