@@ -35,11 +35,13 @@ export const SERIES_GUIDS: Record<string, Record<number, string>> = {
   },
   // Uploaded to Bunny as IMG_2238.MOV / IMG_2334.MOV; order taken from upload time.
   // Ep 4 = IMG_2484.MOV (uploaded 2026-09-24, 9:48, 848x464).
+  // Ep 5 = IMG_2537.MOV (uploaded 2026-09-27, 10:01, 848x464).
   "the-daughter-he-never-knew": {
     1: "10fc3aa1-9972-433c-926b-1b5bd1948af7",
     2: "ee49cdad-bcfb-4989-b9d4-15b3cf7d2884",
     3: "7e050d78-d263-4747-8ecc-110801793ef4",
     4: "33ee6ada-0e00-4ea2-b029-94b9d83fb8cd",
+    5: "d12d83cc-cc55-4a26-9b6e-8cf712446396",
   },
 };
 
