@@ -67,7 +67,7 @@ export const seriesData: Series[] = [
     episodes: 5,
     isNew: true,
     isReal: true,
-    // Episode 1 free, Episode 2-4 premium.
+    // Episode 1 free; Episode 2 onward premium.
     freeEpisodes: 1,
     thumbnail: "/images/daughter-cover.jpg",
     poster: "/images/daughter-poster.jpg",
@@ -75,11 +75,11 @@ export const seriesData: Series[] = [
       "A young woman's life is upended when she discovers the father she was raised to believe was gone is alive, wealthy, and living in New York. Drawn into a world of old money, art and long-kept secrets — from Manhattan to Boston to Los Angeles — she must decide how much of the truth she can bear, and who in her new family is really on her side.",
     rating: "4.8",
     episodeList: [
-      { number: 1, title: "The Daughter He Never Knew", duration: "10:03", videoUrl: "/api/video?series=the-daughter-he-never-knew&ep=1", isFree: true, thumbnail: "/images/daughter-ep1.jpg" },
-      { number: 2, title: "The Family Portrait", duration: "10:09", videoUrl: "/api/video?series=the-daughter-he-never-knew&ep=2", isFree: false, thumbnail: "/images/daughter-ep2.jpg" },
-      { number: 3, title: "Campus Secrets", duration: "9:42", videoUrl: "/api/video?series=the-daughter-he-never-knew&ep=3", isFree: false, thumbnail: "/images/daughter-ep3.jpg" },
-      { number: 4, title: "The Inheritance", duration: "9:48", videoUrl: "/api/video?series=the-daughter-he-never-knew&ep=4", isFree: false, thumbnail: "/images/daughter-ep4.jpg" },
-      { number: 5, title: "Episode 5", duration: "10:01", videoUrl: "/api/video?series=the-daughter-he-never-knew&ep=5", isFree: false, thumbnail: "/images/daughter-ep5.jpg" },
+      { number: 1, title: "TDHNK Episode 1", duration: "10:03", videoUrl: "/api/video?series=the-daughter-he-never-knew&ep=1", isFree: true, thumbnail: "/images/daughter-ep1.jpg" },
+      { number: 2, title: "TDHNK Episode 2", duration: "10:09", videoUrl: "/api/video?series=the-daughter-he-never-knew&ep=2", isFree: false, thumbnail: "/images/daughter-ep2.jpg" },
+      { number: 3, title: "TDHNK Episode 3", duration: "9:42", videoUrl: "/api/video?series=the-daughter-he-never-knew&ep=3", isFree: false, thumbnail: "/images/daughter-ep3.jpg" },
+      { number: 4, title: "TDHNK Episode 4", duration: "9:48", videoUrl: "/api/video?series=the-daughter-he-never-knew&ep=4", isFree: false, thumbnail: "/images/daughter-ep4.jpg" },
+      { number: 5, title: "TDHNK Episode 5", duration: "10:01", videoUrl: "/api/video?series=the-daughter-he-never-knew&ep=5", isFree: false, thumbnail: "/images/daughter-ep5.jpg" },
     ],
   },
   {
