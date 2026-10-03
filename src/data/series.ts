@@ -64,7 +64,7 @@ export const seriesData: Series[] = [
     title: "The Daughter He Never Knew",
     genre: "Family Drama",
     views: "0",
-    episodes: 5,
+    episodes: 6,
     isNew: true,
     isReal: true,
     // Episode 1 free; Episode 2 onward premium.
@@ -80,6 +80,7 @@ export const seriesData: Series[] = [
       { number: 3, title: "TDHNK Episode 3", duration: "9:42", videoUrl: "/api/video?series=the-daughter-he-never-knew&ep=3", isFree: false, thumbnail: "/images/daughter-ep3.jpg" },
       { number: 4, title: "TDHNK Episode 4", duration: "9:48", videoUrl: "/api/video?series=the-daughter-he-never-knew&ep=4", isFree: false, thumbnail: "/images/daughter-ep4.jpg" },
       { number: 5, title: "TDHNK Episode 5", duration: "10:01", videoUrl: "/api/video?series=the-daughter-he-never-knew&ep=5", isFree: false, thumbnail: "/images/daughter-ep5.jpg" },
+      { number: 6, title: "TDHNK Episode 6", duration: "9:26", videoUrl: "/api/video?series=the-daughter-he-never-knew&ep=6", isFree: false, thumbnail: "/images/daughter-ep6.jpg" },
     ],
   },
   {

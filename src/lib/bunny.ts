@@ -42,6 +42,8 @@ export const SERIES_GUIDS: Record<string, Record<number, string>> = {
     3: "7e050d78-d263-4747-8ecc-110801793ef4",
     4: "33ee6ada-0e00-4ea2-b029-94b9d83fb8cd",
     5: "d12d83cc-cc55-4a26-9b6e-8cf712446396",
+    // Ep 6 = IMG_2646.MOV (uploaded 2026-10-03, 9:26, 848x464).
+    6: "7d681ac6-c1dc-4140-ab5f-53513cd83ffd",
   },
 };
 
