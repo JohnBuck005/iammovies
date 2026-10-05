@@ -84,6 +84,25 @@ export const seriesData: Series[] = [
     ],
   },
   {
+    id: "she-was-chosen",
+    title: "She Was Chosen",
+    genre: "Urban Drama",
+    views: "0",
+    episodes: 1,
+    isNew: true,
+    isReal: true,
+    // Episode 1 free; Episode 2 onward premium.
+    freeEpisodes: 1,
+    thumbnail: "/images/swc-cover.jpg",
+    poster: "/images/swc-poster.jpg",
+    description:
+      "Two ambitious men chase fast money, high-rise power and city nights \u2014 until one decision puts everything they've built on the line.",
+    rating: "4.8",
+    episodeList: [
+      { number: 1, title: "SWC Episode 1", duration: "10:43", videoUrl: "/api/video?series=she-was-chosen&ep=1", isFree: true, thumbnail: "/images/swc-ep1.jpg" },
+    ],
+  },
+  {
     id: "crowned-heart",
     title: "The Crowned Heart",
     genre: "Fantasy",

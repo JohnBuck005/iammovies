@@ -45,6 +45,11 @@ export const SERIES_GUIDS: Record<string, Record<number, string>> = {
     // Ep 6 = IMG_2646.MOV (uploaded 2026-10-03, 9:26, 848x464).
     6: "7d681ac6-c1dc-4140-ab5f-53513cd83ffd",
   },
+  // Uploaded to Bunny as IMG_2732.MOV (2026-10-05, 10:43, 848x624),
+  // renamed in the library to "SWC Episode 1".
+  "she-was-chosen": {
+    1: "7b7fc075-6f3e-4a35-b1f5-9eac28c66e56",
+  },
 };
 
 export function getEpisodeGuid(episode: number, seriesId: string = DEFAULT_SERIES_ID): string | null {
